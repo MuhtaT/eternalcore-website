@@ -45,7 +45,8 @@ export const authOptions: AuthOptions = {
             id: user.id.toString(),
             name: user.name,
             email: user.email,
-            image: user.image
+            image: user.image,
+            role: user.role || 'user'
           };
         } catch (error: any) {
           console.error("Ошибка авторизации:", error);
@@ -59,14 +60,18 @@ export const authOptions: AuthOptions = {
     async session({ session, token }: any) {
       if (token?.sub && session?.user) {
         session.user.id = token.sub;
-        console.log("Сессия создана для пользователя:", session.user.email);
+        // Добавляем роль пользователя в сессию
+        session.user.role = token.role || 'user';
+        console.log("Сессия создана для пользователя:", session.user.email, "с ролью:", session.user.role);
       }
       return session;
     },
     async jwt({ token, user }: any) {
       if (user) {
         token.sub = user.id;
-        console.log("JWT токен создан для пользователя ID:", user.id);
+        // Сохраняем роль пользователя в JWT
+        token.role = user.role;
+        console.log("JWT токен создан для пользователя ID:", user.id, "с ролью:", user.role);
       }
       return token;
     },

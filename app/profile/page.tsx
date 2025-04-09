@@ -43,33 +43,44 @@ export default async function ProfilePage() {
     <div className="min-h-screen bg-background">
       <div className="absolute inset-0 bg-grid-white/[0.02] -z-10" />
       
-      {/* Градиентный фон в шапке профиля */}
-      <div className="h-48 bg-gradient-to-r from-[#EC39D9]/80 to-[#FB0D68]/80 relative overflow-hidden">
-        <div className="absolute inset-0 bg-grid-white/[0.03]" />
+      {/* Улучшенный градиентный баннер в шапке профиля */}
+      <div className="h-64 bg-gradient-to-r from-[#EC39D9]/80 to-[#FB0D68]/80 relative overflow-hidden">
+        <div className="absolute inset-0 bg-grid-white/[0.05]" />
+        <div className="absolute bottom-0 left-0 right-0 h-24 bg-gradient-to-t from-background to-transparent" />
+        <div className="absolute -bottom-16 -left-16 w-64 h-64 bg-[#EC39D9]/30 rounded-full blur-3xl" />
+        <div className="absolute -bottom-8 -right-16 w-64 h-64 bg-[#FB0D68]/30 rounded-full blur-3xl" />
       </div>
       
-      <main className="container px-4 -mt-16 relative z-10">
+      <main className="container px-4 -mt-32 relative z-10">
         <div className="flex flex-col md:flex-row items-start gap-6">
-          {/* Карточка профиля пользователя */}
-          <Card className="w-full md:w-80 border-[#EC39D9]/30 shadow-lg shadow-[#FB0D68]/5">
+          {/* Улучшенная карточка профиля пользователя */}
+          <Card className="w-full md:w-80 border-[#EC39D9]/30 shadow-xl shadow-[#FB0D68]/10 backdrop-blur-sm bg-background/95">
             <CardHeader className="flex flex-col items-center space-y-2 pb-2">
-              <Avatar className="h-28 w-28 border-4 border-background">
+              <Avatar className="h-32 w-32 border-4 border-background shadow-lg ring-2 ring-[#FB0D68]/50">
                 <AvatarImage src={user.image || ""} alt={user.name || "Пользователь"} />
-                <AvatarFallback className="text-2xl bg-gradient-to-r from-[#EC39D9] to-[#FB0D68] text-white">
+                <AvatarFallback className="text-3xl bg-gradient-to-r from-[#EC39D9] to-[#FB0D68] text-white">
                   {userInitials}
                 </AvatarFallback>
               </Avatar>
-              <div className="text-center space-y-1">
-                <CardTitle className="text-xl">{user.name}</CardTitle>
+              <div className="text-center space-y-1 mt-2">
+                <CardTitle className="text-2xl bg-gradient-to-r from-[#EC39D9] to-[#FB0D68] text-transparent bg-clip-text">{user.name}</CardTitle>
                 <CardDescription className="text-sm">{user.email}</CardDescription>
               </div>
             </CardHeader>
             <CardContent className="text-center pb-2">
               <p className="text-sm text-muted-foreground">
-                Статус игрока: <span className="font-medium text-[#FB0D68]">Игрок</span>
+                Статус игрока: <span className={`font-medium ${user.role === 'admin' ? 'text-red-500' : 'text-[#FB0D68]'}`}>
+                  {user.role === 'admin' ? 'Администратор' : 'Игрок'}
+                </span>
+                {user.role === 'admin' && (
+                  <span className="ml-2 inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-red-100 dark:bg-red-900 text-red-800 dark:text-red-200">
+                    <Shield className="mr-1 h-3 w-3" />
+                    Админ
+                  </span>
+                )}
               </p>
             </CardContent>
-            <Separator className="bg-[#EC39D9]/20" />
+            <Separator className="bg-gradient-to-r from-[#EC39D9]/40 to-[#FB0D68]/40" />
             <CardContent className="pt-4 pb-2">
               <div className="space-y-3">
                 <Link 
@@ -100,9 +111,18 @@ export default async function ProfilePage() {
                   <Shield className="mr-2 h-4 w-4" />
                   <span>Безопасность</span>
                 </Link>
+                {user.role === 'admin' && (
+                  <Link 
+                    href="/admin" 
+                    className="flex items-center text-sm text-[#DF2456] hover:text-[#FB0D68] transition"
+                  >
+                    <Shield className="mr-2 h-4 w-4" />
+                    <span>Панель администратора</span>
+                  </Link>
+                )}
               </div>
             </CardContent>
-            <Separator className="bg-[#EC39D9]/20" />
+            <Separator className="bg-gradient-to-r from-[#EC39D9]/40 to-[#FB0D68]/40" />
             <CardFooter className="pt-4">
               <Button 
                 variant="outline" 
@@ -128,14 +148,14 @@ export default async function ProfilePage() {
               
               {/* Вкладка Обзор */}
               <TabsContent value="overview">
-                <Card className="border-[#EC39D9]/30 shadow-lg shadow-[#FB0D68]/5">
+                <Card className="border-[#EC39D9]/30 shadow-lg shadow-[#FB0D68]/10 backdrop-blur-sm bg-background/95">
                   <CardHeader>
-                    <CardTitle>Добро пожаловать, {user.name}!</CardTitle>
-                    <CardDescription>
+                    <CardTitle className="text-2xl bg-gradient-to-r from-[#EC39D9] to-[#FB0D68] text-transparent bg-clip-text">Добро пожаловать, {user.name}!</CardTitle>
+                    <CardDescription className="text-base">
                       Это ваш личный кабинет на сервере EternalCore. Здесь вы можете управлять своим аккаунтом и отслеживать информацию.
                     </CardDescription>
                   </CardHeader>
-                  <Separator className="bg-[#EC39D9]/20" />
+                  <Separator className="bg-gradient-to-r from-[#EC39D9]/40 to-[#FB0D68]/40" />
                   <CardContent className="pt-6">
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                       <Card className="border-[#EC39D9]/20">

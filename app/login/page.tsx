@@ -99,11 +99,11 @@ export default function LoginPage() {
   return (
     <div className="min-h-screen flex items-center justify-center bg-background">
       <div className="absolute inset-0 bg-grid-white/[0.02] -z-10" />
-      <div className="absolute inset-0 flex items-center justify-center -z-10 opacity-20">
-        <div className="h-[500px] w-[500px] rounded-full bg-gradient-to-r from-[#EC39D9]/20 to-[#FB0D68]/20 blur-3xl" />
+      <div className="absolute inset-0 flex items-center justify-center -z-10">
+        <div className="h-[600px] w-[600px] rounded-full bg-gradient-to-r from-[#DF2456]/40 to-[#FB0D68]/40 blur-3xl" />
       </div>
       
-      <Card className="w-full max-w-md border border-[#EC39D9]/30 shadow-lg shadow-[#FB0D68]/5">
+      <Card className="w-full max-w-md border border-[#DF2456]/30 shadow-lg shadow-[#FB0D68]/10">
         <CardHeader className="space-y-1">
           <div className="flex items-center justify-center mb-2">
             <Link href="/" className="flex items-center space-x-1">
@@ -113,10 +113,10 @@ export default function LoginPage() {
                 width={35}
                 height={35}
               />
-              <span className="font-bold text-xl bg-gradient-to-r from-[#EC39D9] to-[#FB0D68] text-transparent bg-clip-text ml-0.5">EternalCore</span>
+              <span className="font-bold text-xl bg-gradient-to-r from-[#DF2456] to-[#FB0D68] text-transparent bg-clip-text ml-0.5">EternalCore</span>
             </Link>
           </div>
-          <CardTitle className="text-2xl font-bold text-center">Добро пожаловать</CardTitle>
+          <CardTitle className="text-2xl font-bold text-center bg-gradient-to-r from-[#DF2456] to-[#FB0D68] text-transparent bg-clip-text">Добро пожаловать</CardTitle>
           <CardDescription className="text-center">
             Введите ваш email и пароль для входа
           </CardDescription>
@@ -132,7 +132,7 @@ export default function LoginPage() {
                   placeholder="example@mail.com" 
                   required 
                   type="email" 
-                  className="border-[#EC39D9]/30 focus-visible:ring-[#FB0D68]"
+                  className="border-[#DF2456]/30 focus-visible:ring-[#FB0D68]"
                   value={formData.email}
                   onChange={handleChange}
                 />
@@ -152,7 +152,7 @@ export default function LoginPage() {
                   name="password" 
                   required 
                   type="password" 
-                  className="border-[#EC39D9]/30 focus-visible:ring-[#FB0D68]"
+                  className="border-[#DF2456]/30 focus-visible:ring-[#FB0D68]"
                   value={formData.password}
                   onChange={handleChange}
                 />
@@ -169,14 +169,14 @@ export default function LoginPage() {
           </form>
           
           <div className="flex items-center space-x-2 py-2">
-            <Separator className="flex-1 bg-[#EC39D9]/20" />
+            <Separator className="flex-1 bg-[#DF2456]/20" />
             <span className="text-xs text-muted-foreground">ИЛИ</span>
-            <Separator className="flex-1 bg-[#EC39D9]/20" />
+            <Separator className="flex-1 bg-[#DF2456]/20" />
           </div>
           
           <Button 
             variant="outline" 
-            className="w-full border-[#EC39D9]/30 hover:bg-[#EC39D9]/10"
+            className="w-full border-[#DF2456]/30 hover:bg-[#DF2456]/10"
             asChild
           >
             <Link href="/register">Создать новый аккаунт</Link>
