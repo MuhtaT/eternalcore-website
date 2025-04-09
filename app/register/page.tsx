@@ -19,7 +19,7 @@ import {
 
 export default function RegisterPage() {
   const router = useRouter();
-  const { showError } = useError();
+  const { showError, showSuccess } = useError();
   const [isLoading, setIsLoading] = useState(false);
   const [formData, setFormData] = useState({
     name: "",
@@ -70,10 +70,12 @@ export default function RegisterPage() {
       });
 
       const data = await response.json();
+      console.log("Результат регистрации:", data, response.status);
 
       if (response.ok) {
-        showError({
-          type: 'general',
+        // Успешная регистрация
+        showSuccess({
+          type: 'success',
           title: "Регистрация успешна!",
           message: "Аккаунт успешно создан. Перенаправляем на страницу входа.",
           variant: "default"

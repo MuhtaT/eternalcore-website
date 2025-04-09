@@ -26,12 +26,19 @@ import { handleAuthError } from '@/lib/services/error-service';
 export function AuthButton() {
   const { data: session, status } = useSession();
   const [mounted, setMounted] = useState(false);
-  const { showError } = useError();
+  const { showError, showSuccess } = useError();
   
   // Хук эффекта для избежания расхождения серверного и клиентского рендеринга
   useEffect(() => {
     setMounted(true);
   }, []);
+
+  // Эффект для отслеживания статуса авторизации
+  useEffect(() => {
+    if (mounted) {
+      console.log(`AuthButton: Статус авторизации: ${status}, пользователь:`, session?.user?.email || 'не авторизован');
+    }
+  }, [status, session, mounted]);
   
   // Если компонент не монтирован или статус загружается, показываем заглушку
   if (!mounted || status === 'loading') {
@@ -51,8 +58,16 @@ export function AuthButton() {
     // Функция для выхода с обработкой ошибок
     const handleSignOut = async () => {
       try {
+        console.log("Попытка выхода из системы...");
         await signOut({ callbackUrl: '/' });
+        showSuccess({
+          type: 'success',
+          title: 'Выход из системы',
+          message: 'Вы успешно вышли из аккаунта.',
+          variant: 'default'
+        });
       } catch (error) {
+        console.error("Ошибка при выходе:", error);
         showError(handleAuthError({
           message: 'Произошла ошибка при выходе из системы. Пожалуйста, попробуйте еще раз.'
         }));

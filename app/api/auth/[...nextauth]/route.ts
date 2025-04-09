@@ -39,6 +39,8 @@ export const authOptions: AuthOptions = {
             throw new Error("Неверный пароль");
           }
 
+          console.log(`Успешная авторизация пользователя: ${user.email}`);
+          
           return {
             id: user.id.toString(),
             name: user.name,
@@ -57,14 +59,24 @@ export const authOptions: AuthOptions = {
     async session({ session, token }: any) {
       if (token?.sub && session?.user) {
         session.user.id = token.sub;
+        console.log("Сессия создана для пользователя:", session.user.email);
       }
       return session;
     },
     async jwt({ token, user }: any) {
       if (user) {
         token.sub = user.id;
+        console.log("JWT токен создан для пользователя ID:", user.id);
       }
       return token;
+    },
+    // Добавляем обратный вызов для редиректов
+    async redirect({ url, baseUrl }) {
+      console.log("Перенаправление:", { url, baseUrl });
+      // Гарантируем корректные редиректы
+      if (url.startsWith(baseUrl)) return url;
+      if (url.startsWith("/")) return `${baseUrl}${url}`;
+      return baseUrl;
     }
   },
   pages: {
@@ -77,19 +89,56 @@ export const authOptions: AuthOptions = {
     strategy: "jwt" as const,
     maxAge: 30 * 24 * 60 * 60, // 30 days
   },
-  debug: process.env.NODE_ENV === "development", // Включаем дебаг в режиме разработки
-  secret: process.env.NEXTAUTH_SECRET,
+  // Настройки для cookie сессии
   cookies: {
     sessionToken: {
       name: `next-auth.session-token`,
       options: {
         httpOnly: true,
+        sameSite: "lax",
+        path: "/",
+        secure: false,  // Для разработки на HTTP устанавливаем false
+      },
+    },
+    callbackUrl: {
+      name: `next-auth.callback-url`,
+      options: {
+        httpOnly: true,
         sameSite: "lax" as const,
         path: "/",
-        secure: process.env.NODE_ENV === "production",
+        secure: false,
+        maxAge: 60 * 5, // 5 минут
+      },
+    },
+    csrfToken: {
+      name: `next-auth.csrf-token`,
+      options: {
+        httpOnly: true,
+        sameSite: "lax" as const,
+        path: "/",
+        secure: false,
+        maxAge: 60 * 5, // 5 минут
       },
     },
   },
+  useSecureCookies: false, // Отключаем secure cookies, так как используем HTTP
+  // Настройка для предотвращения перенаправления cookie
+  // @ts-ignore - trustHost доступен в новых версиях NextAuth но еще не добавлен в типы
+  trustHost: true,
+  // Повышаем уровень логирования
+  debug: true,
+  logger: {
+    error(code, ...message) {
+      console.error('[NextAuth Error]', code, message);
+    },
+    warn(code, ...message) {
+      console.warn('[NextAuth Warning]', code, message);
+    },
+    debug(code, ...message) {
+      console.log('[NextAuth Debug]', code, message);
+    },
+  },
+  secret: process.env.NEXTAUTH_SECRET,
 };
 
 const handler = NextAuth(authOptions);

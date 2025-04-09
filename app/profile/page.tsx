@@ -18,13 +18,25 @@ export const metadata: Metadata = {
 export default async function ProfilePage() {
   const session = await getServerSession(authOptions);
 
+  // Логируем попытку доступа к профилю
+  console.log("Доступ к профилю. Сессия:", session ? "Активна" : "Отсутствует");
+
   // Если пользователь не авторизован, перенаправляем на страницу входа
   if (!session?.user) {
+    console.log("Пользователь не авторизован, перенаправление на /login");
     redirect("/login");
+  }
+  
+  // Дополнительная проверка данных пользователя
+  if (!session.user.email) {
+    console.error("Сессия пользователя некорректна:", session);
+    redirect("/login?error=invalid_session");
   }
   
   // Получаем данные пользователя из сессии
   const user = session.user;
+  console.log("Загрузка профиля пользователя:", user.email);
+  
   const userInitials = user.name ? user.name.slice(0, 2).toUpperCase() : "UC";
   
   return (

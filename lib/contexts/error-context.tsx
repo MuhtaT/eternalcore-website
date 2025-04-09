@@ -8,6 +8,7 @@ interface ErrorContextProps {
   error: AppError | null;
   setError: (error: AppError | null) => void;
   showError: (error: AppError) => void;
+  showSuccess: (success: AppError) => void;
   clearError: () => void;
 }
 
@@ -23,19 +24,29 @@ export function ErrorProvider({ children }: { children: ReactNode }) {
     setError(error);
     
     // Используем разные классы стилей для разных типов ошибок
-    let toastClassName = "";
-    
-    if (error.variant === 'destructive') {
-      toastClassName = "border-red-500 bg-red-50 dark:bg-red-950 dark:border-red-900";
-    } else if (error.type === 'success') {
-      toastClassName = "border-green-500 bg-green-50 dark:bg-green-950 dark:border-green-900";
-    }
+    const toastClassName = "border-red-500 bg-red-50 dark:bg-red-950 dark:border-red-900";
     
     toast({
       title: error.title,
       description: error.message,
-      variant: error.variant || 'destructive',
+      variant: 'destructive',
       duration: 5000, // Показываем сообщение дольше для лучшей видимости
+      className: toastClassName
+    });
+  };
+
+  // Функция для отображения успешных сообщений
+  const showSuccess = (success: AppError) => {
+    console.log("Отображение успешного сообщения:", success);
+    
+    // Стили для успешных сообщений
+    const toastClassName = "border-green-500 bg-green-50 dark:bg-green-950 dark:border-green-900";
+    
+    toast({
+      title: success.title,
+      description: success.message,
+      variant: 'default',
+      duration: 3000,
       className: toastClassName
     });
   };
@@ -66,7 +77,7 @@ export function ErrorProvider({ children }: { children: ReactNode }) {
   }, []);
 
   return (
-    <ErrorContext.Provider value={{ error, setError, showError, clearError }}>
+    <ErrorContext.Provider value={{ error, setError, showError, showSuccess, clearError }}>
       {children}
     </ErrorContext.Provider>
   );

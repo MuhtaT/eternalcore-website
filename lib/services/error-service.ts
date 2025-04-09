@@ -105,6 +105,7 @@ export function handleRegistrationError(error: any, status?: number): AppError {
 
 // Функция для успешных уведомлений
 export function handleSuccess(message: string, title: string = 'Успешно'): AppError {
+  console.log('Успешное действие:', { title, message });
   return {
     type: 'success',
     title: title,

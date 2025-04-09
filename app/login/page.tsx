@@ -13,10 +13,11 @@ import { Label } from "@/components/ui/label";
 import { User } from "lucide-react";
 import { useError } from '@/lib/contexts/error-context';
 import { handleAuthError, handleConnectionError } from '@/lib/services/error-service';
+import { checkAuthState } from '@/lib/services/auth-diagnostics';
 
 export default function LoginPage() {
   const router = useRouter();
-  const { showError } = useError();
+  const { showError, showSuccess } = useError();
   const [isLoading, setIsLoading] = useState(false);
   const [formData, setFormData] = useState({
     email: "",
@@ -39,6 +40,8 @@ export default function LoginPage() {
         password: formData.password,
       });
 
+      console.log("Результат входа:", result);
+
       if (result?.error) {
         showError({
           type: 'auth',
@@ -47,14 +50,44 @@ export default function LoginPage() {
           variant: 'destructive'
         });
         setIsLoading(false);
-      } else {
-        showError({
-          type: 'auth',
+      } else if (result?.ok) {
+        showSuccess({
+          type: 'success',
           title: "Успешный вход",
           message: "Вы успешно вошли в систему. Перенаправляем в личный кабинет.",
           variant: "default"
         });
-        setTimeout(() => router.push('/profile'), 1000);
+        
+        try {
+          const authState = await checkAuthState();
+          console.log("Диагностика авторизации:", authState);
+          
+          if (!authState.valid) {
+            console.error("Проблема с авторизацией после входа:", authState);
+            showError({
+              type: 'auth',
+              title: "Проблема с авторизацией",
+              message: "Возникла проблема с авторизацией. Пожалуйста, попробуйте еще раз.",
+              variant: 'destructive'
+            });
+            setIsLoading(false);
+            return;
+          }
+        } catch (diagError) {
+          console.error("Ошибка при диагностике авторизации:", diagError);
+        }
+        
+        setTimeout(() => {
+          router.push('/profile');
+        }, 1500);
+      } else {
+        showError({
+          type: 'auth', 
+          title: "Ошибка входа",
+          message: "Произошла неизвестная ошибка при входе в систему.",
+          variant: 'destructive'
+        });
+        setIsLoading(false);
       }
     } catch (error) {
       console.error("Ошибка авторизации:", error);
