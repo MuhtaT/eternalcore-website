@@ -6,6 +6,7 @@ import Link from "next/link"
 import Image from "next/image"
 import { Button } from "@/components/ui/button"
 import { getAllDonatePackages, getAllPrivileges } from "@/lib/db/database"
+import { DonatePackageCard, PrivilegeCard } from "@/components/client-donate-components"
 
 export const revalidate = 3600; // Revalidate every hour
 
@@ -39,67 +40,6 @@ export default async function DonatPage() {
   const donatePackages = await getAllDonatePackages() as DonatePackage[];
   const privileges = await getAllPrivileges() as Privilege[];
 
-  // Функция для получения иконки статуса пакета
-  const getStatusIcon = (status: string) => {
-    switch (status) {
-      case 'recommended':
-        return <CheckCircle className="h-5 w-5 text-green-500" />;
-      case 'popular':
-        return <Star className="h-5 w-5 text-blue-500" />;
-      case 'maximum':
-        return <Crown className="h-5 w-5 text-purple-500" />;
-      default:
-        return <Diamond className="h-5 w-5 text-[#DF2456]" />;
-    }
-  };
-
-  // Функция для получения названия статуса
-  const getStatusName = (status: string): string => {
-    switch (status) {
-      case 'active': return 'Активен';
-      case 'sale': return 'Скидка';
-      case 'new': return 'Новый';
-      case 'vip': return 'VIP';
-      default: return 'Активен';
-    }
-  };
-
-  // Функция для получения цвета статуса
-  const getStatusColor = (status: string): string => {
-    switch (status) {
-      case 'active': return 'bg-green-500/20 text-green-400';
-      case 'sale': return 'bg-orange-500/20 text-orange-400';
-      case 'new': return 'bg-blue-500/20 text-blue-400';
-      case 'vip': return 'bg-purple-500/20 text-purple-400';
-      default: return 'bg-green-500/20 text-green-400';
-    }
-  };
-
-  // Функция для получения иконки типа привилегии
-  const getPrivilegeIcon = (type: string) => {
-    switch (type) {
-      case 'permission':
-        return <Shield className="h-5 w-5 text-[#DF2456]" />;
-      case 'command':
-        return <Server className="h-5 w-5 text-[#DF2456]" />;
-      case 'feature':
-        return <Gift className="h-5 w-5 text-[#DF2456]" />;
-      default:
-        return <Shield className="h-5 w-5 text-[#DF2456]" />;
-    }
-  };
-
-  // Вспомогательные функции для отображения статусов пакетов
-  const getPackageBackgroundColor = (status: string): string => {
-    switch (status) {
-      case 'active': return 'bg-gradient-to-tr from-green-950/50 to-green-900/20';
-      case 'sale': return 'bg-gradient-to-tr from-orange-950/50 to-orange-900/20';
-      case 'new': return 'bg-gradient-to-tr from-blue-950/50 to-blue-900/20';
-      case 'vip': return 'bg-gradient-to-tr from-purple-950/50 to-purple-900/20';
-      default: return 'bg-gradient-to-tr from-green-950/50 to-green-900/20';
-    }
-  };
-
   return (
     <main className="flex-1">
       <section className="w-full py-12 md:py-24 lg:py-32 relative overflow-hidden">
@@ -128,85 +68,39 @@ export default async function DonatPage() {
               </TabsList>
               
               <TabsContent value="packages" className="mt-6">
-                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 mt-8">
-                  {donatePackages?.map((pkg) => (
-                    <div
-                      key={pkg.id}
-                      className={`p-6 rounded-lg border border-white/10 transition-all hover:border-primary/50 ${getPackageBackgroundColor(
-                        pkg.status
-                      )}`}
-                    >
-                      <div className="flex items-center gap-2 mb-4">
-                        {getStatusIcon(pkg.status)}
-                        <h3 className="text-xl font-bold">{pkg.name}</h3>
-                        <div
-                          className={`ml-auto px-3 py-1 rounded-full text-sm font-semibold ${getStatusColor(
-                            pkg.status
-                          )}`}
-                        >
-                          {getStatusName(pkg.status)}
-                        </div>
-                      </div>
-                      <div className="text-2xl font-bold mb-4">${pkg.price}</div>
-                      <p className="text-gray-300 mb-6">{pkg.description}</p>
-                      <div className="mb-6">
-                        <div className="text-lg font-semibold mb-2">Включает:</div>
-                        <ul className="space-y-2">
-                          {JSON.parse(pkg.features).map((feature: string, index: number) => (
-                            <li key={index} className="flex items-start gap-2">
-                              <CheckCircle className="w-5 h-5 text-green-400 mt-0.5 flex-shrink-0" />
-                              <span>{feature}</span>
-                            </li>
-                          ))}
-                        </ul>
-                      </div>
-                      <button
-                        type="button"
-                        className="w-full bg-primary/20 hover:bg-primary/30 text-primary-foreground py-2 rounded-lg font-medium transition-colors"
-                        onClick={() => {
-                          // Действие при клике на кнопку покупки
-                        }}
-                      >
-                        Купить
-                      </button>
-                    </div>
-                  ))}
-                </div>
+                {donatePackages.length === 0 ? (
+                  <div className="text-center p-12 border border-dashed rounded-lg">
+                    <Gift className="mx-auto h-12 w-12 text-muted-foreground mb-4" />
+                    <h3 className="text-xl font-medium mb-2">Донат-пакеты скоро появятся</h3>
+                    <p className="text-muted-foreground max-w-md mx-auto">
+                      В настоящее время мы работаем над созданием донат-пакетов. Пожалуйста, загляните позже.
+                    </p>
+                  </div>
+                ) : (
+                  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 mt-8">
+                    {donatePackages.map((pkg) => (
+                      <DonatePackageCard key={pkg.id} pkg={pkg} />
+                    ))}
+                  </div>
+                )}
               </TabsContent>
               
               <TabsContent value="privileges" className="mt-6">
-                <Card className="border-[#DF2456]/20">
-                  <CardHeader>
-                    <CardTitle>Дополнительные возможности</CardTitle>
-                    <CardDescription>
-                      Отдельные возможности, которые вы можете приобрести для своего персонажа
-                    </CardDescription>
-                  </CardHeader>
-                  <CardContent>
-                    {privileges.length === 0 ? (
-                      <div className="text-center p-6 border border-[#DF2456]/20 rounded-lg">
-                        <p className="text-muted-foreground">Информация о привилегиях загружается...</p>
-                      </div>
-                    ) : (
-                      <div className="grid gap-4">
-                        {privileges.map((priv) => (
-                          <div key={priv.id} className="flex items-center justify-between p-4 border border-[#DF2456]/20 rounded-lg hover:bg-[#DF2456]/5 transition-colors">
-                            <div className="flex items-center">
-                              {getPrivilegeIcon(priv.type)}
-                              <div className="ml-3">
-                                <h4 className="font-medium">{priv.name}</h4>
-                                <p className="text-sm text-muted-foreground">{priv.description}</p>
-                              </div>
-                            </div>
-                            <Button variant="outline" size="sm" className="border-[#DF2456]/30 hover:bg-[#DF2456]/10">
-                              Приобрести
-                            </Button>
-                          </div>
-                        ))}
-                      </div>
-                    )}
-                  </CardContent>
-                </Card>
+                {privileges.length === 0 ? (
+                  <div className="text-center p-12 border border-dashed rounded-lg">
+                    <Shield className="mx-auto h-12 w-12 text-muted-foreground mb-4" />
+                    <h3 className="text-xl font-medium mb-2">Привилегии скоро будут доступны</h3>
+                    <p className="text-muted-foreground max-w-md mx-auto">
+                      В настоящее время мы работаем над созданием отдельных привилегий. Пожалуйста, загляните позже.
+                    </p>
+                  </div>
+                ) : (
+                  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 mt-8">
+                    {privileges.map((priv) => (
+                      <PrivilegeCard key={priv.id} priv={priv} />
+                    ))}
+                  </div>
+                )}
               </TabsContent>
             </Tabs>
             
@@ -238,8 +132,8 @@ export default async function DonatPage() {
                   
                   <div className="p-4 border border-[#DF2456]/20 rounded-lg">
                     <Users className="h-5 w-5 text-[#FB0D68] mb-2" />
-                    <h4 className="font-medium mb-1">Развитие сообщества</h4>
-                    <p className="text-sm text-muted-foreground">Организация конкурсов, турниров и других мероприятий для игроков сервера.</p>
+                    <h4 className="font-medium mb-1">Сообщество</h4>
+                    <p className="text-sm text-muted-foreground">Организация турниров, конкурсов и мероприятий для игроков сервера.</p>
                   </div>
                 </div>
               </CardContent>
@@ -247,27 +141,31 @@ export default async function DonatPage() {
             
             <Card className="w-full max-w-4xl border-[#DF2456]/20">
               <CardHeader>
-                <CardTitle>Способы оплаты</CardTitle>
-                <CardDescription>
-                  Мы поддерживаем различные способы оплаты для вашего удобства
-                </CardDescription>
+                <CardTitle className="flex items-center">
+                  <Server className="h-5 w-5 text-[#FB0D68] mr-2" />
+                  Способы оплаты
+                </CardTitle>
               </CardHeader>
               <CardContent>
-                <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-5 gap-4">
-                  <div className="p-4 border border-[#DF2456]/20 rounded-lg flex items-center justify-center">
-                    <Image src="/images/payment/card.png" alt="Банковская карта" width={60} height={40} />
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                  <div className="p-4 border border-[#DF2456]/20 rounded-lg">
+                    <h4 className="font-medium mb-2">Банковские карты</h4>
+                    <p className="text-sm text-muted-foreground">Visa, MasterCard, МИР</p>
                   </div>
-                  <div className="p-4 border border-[#DF2456]/20 rounded-lg flex items-center justify-center">
-                    <Image src="/images/payment/qiwi.png" alt="QIWI" width={60} height={40} />
+                  
+                  <div className="p-4 border border-[#DF2456]/20 rounded-lg">
+                    <h4 className="font-medium mb-2">Электронные кошельки</h4>
+                    <p className="text-sm text-muted-foreground">ЮMoney, QIWI, WebMoney</p>
                   </div>
-                  <div className="p-4 border border-[#DF2456]/20 rounded-lg flex items-center justify-center">
-                    <Image src="/images/payment/webmoney.png" alt="WebMoney" width={60} height={40} />
+                  
+                  <div className="p-4 border border-[#DF2456]/20 rounded-lg">
+                    <h4 className="font-medium mb-2">Мобильные платежи</h4>
+                    <p className="text-sm text-muted-foreground">МТС, Билайн, МегаФон, Tele2</p>
                   </div>
-                  <div className="p-4 border border-[#DF2456]/20 rounded-lg flex items-center justify-center">
-                    <Image src="/images/payment/yoomoney.png" alt="ЮMoney" width={60} height={40} />
-                  </div>
-                  <div className="p-4 border border-[#DF2456]/20 rounded-lg flex items-center justify-center">
-                    <Image src="/images/payment/crypto.png" alt="Криптовалюта" width={60} height={40} />
+                  
+                  <div className="p-4 border border-[#DF2456]/20 rounded-lg">
+                    <h4 className="font-medium mb-2">Криптовалюты</h4>
+                    <p className="text-sm text-muted-foreground">Bitcoin, Ethereum, USDT</p>
                   </div>
                 </div>
               </CardContent>

@@ -32,9 +32,28 @@ export async function POST(request: NextRequest) {
     // Получение данных из запроса
     const data = await request.json();
     
+    // Логирование полученных данных
+    console.log('[DEBUG API] POST /api/donate/packages данные:', JSON.stringify(data));
+    
     // Валидация данных
     if (!data.name || !data.price || !data.description || !data.group || !data.command) {
       return NextResponse.json({ error: 'Не все обязательные поля заполнены' }, { status: 400 });
+    }
+
+    // Обработка features - проверяем, что это строка JSON или массив
+    let features = data.features;
+    if (!features) {
+      features = JSON.stringify(["Базовая привилегия"]);
+    } else if (Array.isArray(features)) {
+      features = JSON.stringify(features);
+    } else if (typeof features === 'string') {
+      try {
+        // Проверяем, что строка - валидный JSON
+        JSON.parse(features);
+      } catch (e) {
+        console.error('[DEBUG API] Ошибка парсинга JSON в features:', e);
+        features = JSON.stringify(["Базовая привилегия"]);
+      }
     }
 
     // Создание нового пакета
@@ -44,9 +63,11 @@ export async function POST(request: NextRequest) {
       description: data.description,
       status: data.status || 'normal',
       group: data.group,
-      features: data.features || [],
+      features: features,
       command: data.command
     });
+
+    console.log('[DEBUG API] Создан новый донат-пакет:', JSON.stringify(newPackage));
 
     return NextResponse.json(newPackage, { status: 201 });
   } catch (error: any) {
@@ -73,8 +94,30 @@ export async function PUT(request: NextRequest) {
     // Получение данных из запроса
     const data = await request.json();
     
+    // Логирование полученных данных
+    console.log('[DEBUG API] PUT /api/donate/packages данные:', JSON.stringify(data));
+    
     if (!data.id) {
       return NextResponse.json({ error: 'ID пакета не указан' }, { status: 400 });
+    }
+
+    // Обработка features - проверяем, что это строка JSON или массив
+    let features = data.features;
+    if (features !== undefined) {
+      if (Array.isArray(features)) {
+        features = JSON.stringify(features);
+      } else if (typeof features === 'string') {
+        try {
+          // Проверяем, что строка - валидный JSON
+          JSON.parse(features);
+        } catch (e) {
+          console.error('[DEBUG API] Ошибка парсинга JSON в features при обновлении:', e);
+          // Если недействительный JSON, возвращаем ошибку
+          return NextResponse.json({ 
+            error: 'Поле features должно быть валидным JSON массивом' 
+          }, { status: 400 });
+        }
+      }
     }
 
     // Обновление пакета
@@ -84,13 +127,15 @@ export async function PUT(request: NextRequest) {
       description: data.description,
       status: data.status,
       group: data.group,
-      features: data.features,
+      features: features,
       command: data.command
     });
 
     if (success) {
+      console.log(`[DEBUG API] Донат-пакет с ID ${data.id} успешно обновлен`);
       return NextResponse.json({ success: true });
     } else {
+      console.log(`[DEBUG API] Донат-пакет с ID ${data.id} не найден или не был изменен`);
       return NextResponse.json({ error: 'Пакет не найден или не был изменен' }, { status: 404 });
     }
   } catch (error: any) {

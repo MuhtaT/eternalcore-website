@@ -74,6 +74,347 @@ interface AdminPanelProps {
   users: User[];
 }
 
+// Компонент формы для редактирования/создания донат-пакета
+function DonatePackageForm({ 
+  initialData = null, 
+  onSubmit, 
+  onCancel 
+}: { 
+  initialData?: any, 
+  onSubmit: (data: any) => void, 
+  onCancel: () => void 
+}) {
+  const [formData, setFormData] = useState({
+    name: initialData?.name || '',
+    price: initialData?.price || '',
+    description: initialData?.description || '',
+    status: initialData?.status || 'normal',
+    group: initialData?.group || '',
+    features: initialData?.features ? 
+      (typeof initialData.features === 'string' ? initialData.features : JSON.stringify(initialData.features)) : 
+      JSON.stringify(["Базовая привилегия"]),
+    command: initialData?.command || ''
+  });
+  
+  const [error, setError] = useState('');
+
+  const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>) => {
+    const { name, value } = e.target;
+    setFormData({ ...formData, [name]: value });
+  };
+
+  const handleSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    
+    // Валидация данных
+    if (!formData.name || !formData.price || !formData.description || !formData.group || !formData.command) {
+      setError('Пожалуйста, заполните все обязательные поля');
+      return;
+    }
+    
+    // Проверка валидности JSON для features
+    try {
+      JSON.parse(formData.features);
+    } catch (e) {
+      setError('Неверный формат JSON для списка возможностей');
+      return;
+    }
+    
+    // Проверка на числовое значение цены
+    if (isNaN(Number(formData.price))) {
+      setError('Цена должна быть числом');
+      return;
+    }
+    
+    // Передаем данные родительскому компоненту
+    onSubmit({
+      ...formData,
+      price: Number(formData.price),
+      features: formData.features // Это уже строка JSON, не нужно преобразовывать
+    });
+  };
+  
+  return (
+    <form onSubmit={handleSubmit} className="space-y-4">
+      {error && (
+        <div className="p-3 bg-red-500/10 border border-red-500/50 text-red-500 rounded-md text-sm">
+          {error}
+        </div>
+      )}
+      
+      <div className="grid grid-cols-2 gap-4">
+        <div className="space-y-2">
+          <Label htmlFor="name">Название пакета*</Label>
+          <Input 
+            id="name" 
+            name="name" 
+            value={formData.name} 
+            onChange={handleChange} 
+            placeholder="VIP" 
+            required 
+          />
+        </div>
+        
+        <div className="space-y-2">
+          <Label htmlFor="price">Цена*</Label>
+          <Input 
+            id="price" 
+            name="price" 
+            value={formData.price} 
+            onChange={handleChange} 
+            placeholder="299" 
+            type="number" 
+            min="0" 
+            required 
+          />
+        </div>
+      </div>
+      
+      <div className="space-y-2">
+        <Label htmlFor="description">Описание пакета*</Label>
+        <Textarea 
+          id="description" 
+          name="description" 
+          value={formData.description} 
+          onChange={handleChange} 
+          placeholder="Стартовый пакет привилегий..." 
+          required 
+        />
+      </div>
+      
+      <div className="grid grid-cols-2 gap-4">
+        <div className="space-y-2">
+          <Label htmlFor="status">Статус пакета</Label>
+          <Select 
+            name="status" 
+            value={formData.status}
+            onValueChange={(value) => setFormData({ ...formData, status: value })}
+          >
+            <SelectTrigger>
+              <SelectValue placeholder="Выберите статус" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="normal">Обычный</SelectItem>
+              <SelectItem value="recommended">Рекомендуемый</SelectItem>
+              <SelectItem value="popular">Популярный</SelectItem>
+              <SelectItem value="maximum">Максимальный</SelectItem>
+            </SelectContent>
+          </Select>
+        </div>
+        
+        <div className="space-y-2">
+          <Label htmlFor="group">Группа пермишенов*</Label>
+          <Input 
+            id="group" 
+            name="group" 
+            value={formData.group} 
+            onChange={handleChange} 
+            placeholder="vip" 
+            required 
+          />
+        </div>
+      </div>
+      
+      <div className="space-y-2">
+        <Label htmlFor="features">Список возможностей (JSON массив)*</Label>
+        <Textarea 
+          id="features" 
+          name="features" 
+          value={formData.features} 
+          onChange={handleChange} 
+          placeholder='["Доступ к VIP серверам", "Префикс [VIP]", "Двойной опыт"]' 
+          required 
+        />
+        <p className="text-xs text-muted-foreground">
+          Введите список возможностей в формате JSON массива. Например: ["Доступ к VIP серверам", "Префикс [VIP]"]
+        </p>
+      </div>
+      
+      <div className="space-y-2">
+        <Label htmlFor="command">Команда выдачи привилегии*</Label>
+        <Input 
+          id="command" 
+          name="command" 
+          value={formData.command} 
+          onChange={handleChange} 
+          placeholder="lp user {player} parent set vip" 
+          required 
+        />
+      </div>
+      
+      <div className="flex justify-end space-x-2 pt-4">
+        <Button type="button" variant="outline" onClick={onCancel}>Отмена</Button>
+        <Button type="submit" className="bg-[#FB0D68] hover:bg-[#FB0D68]/90">
+          {initialData ? 'Сохранить изменения' : 'Создать пакет'}
+        </Button>
+      </div>
+    </form>
+  );
+}
+
+// Компонент формы для редактирования/создания привилегии
+function PrivilegeForm({ 
+  initialData = null, 
+  onSubmit, 
+  onCancel 
+}: { 
+  initialData?: any, 
+  onSubmit: (data: any) => void, 
+  onCancel: () => void 
+}) {
+  const [formData, setFormData] = useState({
+    name: initialData?.name || '',
+    type: initialData?.type || 'permission',
+    description: initialData?.description || '',
+    permission: initialData?.permission || '',
+    command: initialData?.command || '',
+    price: initialData?.price || '',
+    icon: initialData?.icon || ''
+  });
+  
+  const [error, setError] = useState('');
+
+  const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>) => {
+    const { name, value } = e.target;
+    setFormData({ ...formData, [name]: value });
+  };
+
+  const handleSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    
+    // Валидация данных
+    if (!formData.name || !formData.description || !formData.permission || !formData.command) {
+      setError('Пожалуйста, заполните все обязательные поля');
+      return;
+    }
+    
+    // Передаем данные родительскому компоненту
+    onSubmit(formData);
+  };
+  
+  return (
+    <form onSubmit={handleSubmit} className="space-y-4">
+      {error && (
+        <div className="p-3 bg-red-500/10 border border-red-500/50 text-red-500 rounded-md text-sm">
+          {error}
+        </div>
+      )}
+      
+      <div className="space-y-2">
+        <Label htmlFor="name">Название привилегии*</Label>
+        <Input 
+          id="name" 
+          name="name" 
+          value={formData.name} 
+          onChange={handleChange} 
+          placeholder="Доступ к телепортации" 
+          required 
+        />
+      </div>
+      
+      <div className="space-y-2">
+        <Label htmlFor="type">Тип привилегии</Label>
+        <Select 
+          name="type" 
+          value={formData.type}
+          onValueChange={(value) => setFormData({ ...formData, type: value })}
+        >
+          <SelectTrigger>
+            <SelectValue placeholder="Выберите тип" />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="permission">Разрешение</SelectItem>
+            <SelectItem value="command">Команда</SelectItem>
+            <SelectItem value="feature">Функция</SelectItem>
+          </SelectContent>
+        </Select>
+      </div>
+      
+      <div className="space-y-2">
+        <Label htmlFor="description">Описание привилегии*</Label>
+        <Textarea 
+          id="description" 
+          name="description" 
+          value={formData.description} 
+          onChange={handleChange} 
+          placeholder="Позволяет телепортироваться к другим игрокам..." 
+          required 
+        />
+      </div>
+      
+      <div className="space-y-2">
+        <Label htmlFor="permission">Разрешение (permission)*</Label>
+        <Input 
+          id="permission" 
+          name="permission" 
+          value={formData.permission} 
+          onChange={handleChange} 
+          placeholder="essentials.tp" 
+          required 
+        />
+      </div>
+      
+      <div className="space-y-2">
+        <Label htmlFor="command">Команда выдачи привилегии*</Label>
+        <Input 
+          id="command" 
+          name="command" 
+          value={formData.command} 
+          onChange={handleChange} 
+          placeholder="lp user {player} permission set essentials.tp true" 
+          required 
+        />
+      </div>
+      
+      <div className="space-y-2">
+        <Label htmlFor="price">Цена (₽)*</Label>
+        <Input 
+          id="price" 
+          name="price" 
+          type="number"
+          step="0.01"
+          min="0"
+          value={formData.price} 
+          onChange={handleChange} 
+          placeholder="100" 
+          required 
+        />
+      </div>
+      
+      <div className="space-y-2">
+        <Label htmlFor="icon">Иконка</Label>
+        <Select 
+          name="icon" 
+          value={formData.icon}
+          onValueChange={(value) => setFormData({ ...formData, icon: value })}
+        >
+          <SelectTrigger>
+            <SelectValue placeholder="Выберите иконку" />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="">По умолчанию (от типа)</SelectItem>
+            <SelectItem value="shield">Щит</SelectItem>
+            <SelectItem value="command">Терминал</SelectItem>
+            <SelectItem value="zap">Молния</SelectItem>
+            <SelectItem value="gift">Подарок</SelectItem>
+            <SelectItem value="rocket">Ракета</SelectItem>
+            <SelectItem value="key">Ключ</SelectItem>
+            <SelectItem value="crown">Корона</SelectItem>
+            <SelectItem value="star">Звезда</SelectItem>
+          </SelectContent>
+        </Select>
+      </div>
+      
+      <div className="flex justify-end space-x-2 pt-4">
+        <Button type="button" variant="outline" onClick={onCancel}>Отмена</Button>
+        <Button type="submit" className="bg-[#FB0D68] hover:bg-[#FB0D68]/90">
+          {initialData ? 'Сохранить изменения' : 'Создать привилегию'}
+        </Button>
+      </div>
+    </form>
+  );
+}
+
 export function AdminPanel({ users: initialUsers }: AdminPanelProps) {
   const [users, setUsers] = useState<User[]>(initialUsers);
   const [searchTerm, setSearchTerm] = useState('');
@@ -391,7 +732,7 @@ export function AdminPanel({ users: initialUsers }: AdminPanelProps) {
   };
 
   // Добавление новой привилегии через API
-  const addPrivilege = async (privilegeData: any) => {
+  const addPrivilegeItem = async (privilegeData: any) => {
     try {
       const response = await fetch('/api/donate/privileges', {
         method: 'POST',
@@ -1766,7 +2107,7 @@ export function AdminPanel({ users: initialUsers }: AdminPanelProps) {
                     <TabsTrigger value="privileges">Привилегии</TabsTrigger>
                   </TabsList>
                   
-                  {/* Вкладка управления донат-пакетами */}
+                  {/* Секция донат-пакетов */}
                   <TabsContent value="packages" className="space-y-4 mt-4">
                     <div className="flex justify-between items-center">
                       <h3 className="text-lg font-semibold">Список донат-пакетов</h3>
@@ -1853,7 +2194,7 @@ export function AdminPanel({ users: initialUsers }: AdminPanelProps) {
                     </div>
                   </TabsContent>
                   
-                  {/* Вкладка управления привилегиями */}
+                  {/* Секция привилегий */}
                   <TabsContent value="privileges" className="space-y-4 mt-4">
                     <div className="flex justify-between items-center">
                       <h3 className="text-lg font-semibold">Список привилегий</h3>
@@ -2408,33 +2749,58 @@ export function AdminPanel({ users: initialUsers }: AdminPanelProps) {
               Заполните информацию о донат-пакете для отображения на сайте
             </DialogDescription>
           </DialogHeader>
-          <form onSubmit={(e) => {
+          <form onSubmit={async (e) => {
             e.preventDefault();
             const form = e.target as HTMLFormElement;
             const formData = new FormData(form);
             
-            const newPackage = {
-              id: currentPackage?.id || Date.now(),
+            const packageData = {
+              id: currentPackage?.id,
               name: formData.get('name') as string,
               price: Number(formData.get('price')),
               description: formData.get('description') as string,
               status: formData.get('status') as string,
               group: formData.get('group') as string,
-              features: (formData.get('features') as string).split('\n').filter(Boolean),
+              features: JSON.stringify((formData.get('features') as string).split('\n').filter(Boolean)),
               command: formData.get('command') as string
             };
             
-            if (currentPackage) {
-              // Обновление существующего пакета
-              setDonatePackages(donatePackages.map(pkg => 
-                pkg.id === currentPackage.id ? newPackage : pkg
-              ));
-            } else {
-              // Добавление нового пакета
-              setDonatePackages([...donatePackages, newPackage]);
+            try {
+              if (currentPackage) {
+                // Обновление существующего пакета через API
+                const success = await updateDonatePackage(currentPackage.id, packageData);
+                if (success) {
+                  showSuccess({
+                    type: 'success',
+                    title: 'Пакет обновлен',
+                    message: `Донат-пакет "${packageData.name}" успешно обновлен`,
+                    variant: 'default'
+                  });
+                }
+              } else {
+                // Добавление нового пакета через API
+                const success = await addDonatePackage(packageData);
+                if (success) {
+                  showSuccess({
+                    type: 'success',
+                    title: 'Пакет создан',
+                    message: `Донат-пакет "${packageData.name}" успешно создан`,
+                    variant: 'default'
+                  });
+                }
+              }
+              
+              // Обновляем список пакетов
+              await fetchDonatePackages();
+              setShowDonatePackageDialog(false);
+            } catch (error: any) {
+              showError({
+                type: 'general',
+                title: currentPackage ? 'Ошибка обновления' : 'Ошибка создания',
+                message: error.message || `Не удалось ${currentPackage ? 'обновить' : 'создать'} донат-пакет`,
+                variant: 'destructive'
+              });
             }
-            
-            setShowDonatePackageDialog(false);
           }}>
             <div className="grid gap-4 py-4">
               <div className="grid grid-cols-4 items-center gap-4">
@@ -2552,31 +2918,58 @@ export function AdminPanel({ users: initialUsers }: AdminPanelProps) {
               Заполните информацию о привилегии для системы доната
             </DialogDescription>
           </DialogHeader>
-          <form onSubmit={(e) => {
+          <form onSubmit={async (e) => {
             e.preventDefault();
             const form = e.target as HTMLFormElement;
             const formData = new FormData(form);
             
-            const newPrivilege = {
-              id: currentPrivilege?.id || Date.now(),
+            const privilegeData = {
+              id: currentPrivilege?.id,
               name: formData.get('name') as string,
               type: formData.get('type') as string,
               description: formData.get('description') as string,
               permission: formData.get('permission') as string,
-              command: formData.get('command') as string
+              command: formData.get('command') as string,
+              price: formData.get('price') ? Number(formData.get('price')) : undefined,
+              icon: (formData.get('icon') as string) === 'none' ? undefined : (formData.get('icon') as string)
             };
             
-            if (currentPrivilege) {
-              // Обновление существующей привилегии
-              setPrivileges(privileges.map(priv => 
-                priv.id === currentPrivilege.id ? newPrivilege : priv
-              ));
-            } else {
-              // Добавление новой привилегии
-              setPrivileges([...privileges, newPrivilege]);
+            try {
+              if (currentPrivilege) {
+                // Обновление существующей привилегии через API
+                const success = await updatePrivilegeItem(currentPrivilege.id, privilegeData);
+                if (success) {
+                  showSuccess({
+                    type: 'success',
+                    title: 'Привилегия обновлена',
+                    message: `Привилегия "${privilegeData.name}" успешно обновлена`,
+                    variant: 'default'
+                  });
+                }
+              } else {
+                // Добавление новой привилегии через API
+                const success = await addPrivilegeItem(privilegeData);
+                if (success) {
+                  showSuccess({
+                    type: 'success',
+                    title: 'Привилегия создана',
+                    message: `Привилегия "${privilegeData.name}" успешно создана`,
+                    variant: 'default'
+                  });
+                }
+              }
+              
+              // Обновляем список привилегий
+              await fetchPrivileges();
+              setShowPrivilegeDialog(false);
+            } catch (error: any) {
+              showError({
+                type: 'general',
+                title: currentPrivilege ? 'Ошибка обновления' : 'Ошибка создания',
+                message: error.message || `Не удалось ${currentPrivilege ? 'обновить' : 'создать'} привилегию`,
+                variant: 'destructive'
+              });
             }
-            
-            setShowPrivilegeDialog(false);
           }}>
             <div className="grid gap-4 py-4">
               <div className="grid grid-cols-4 items-center gap-4">
@@ -2600,6 +2993,41 @@ export function AdminPanel({ users: initialUsers }: AdminPanelProps) {
                     <SelectItem value="permission">Право</SelectItem>
                     <SelectItem value="command">Команда</SelectItem>
                     <SelectItem value="feature">Возможность</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+              <div className="grid grid-cols-4 items-center gap-4">
+                <Label htmlFor="priv-price" className="text-right">Цена (₽)</Label>
+                <Input 
+                  id="priv-price" 
+                  name="price" 
+                  type="number"
+                  step="0.01"
+                  min="0"
+                  placeholder="100" 
+                  className="col-span-3 border-[#DF2456]/30 focus-visible:ring-[#FB0D68]"
+                  defaultValue={currentPrivilege?.price || ''}
+                />
+              </div>
+              <div className="grid grid-cols-4 items-center gap-4">
+                <Label htmlFor="priv-icon" className="text-right">
+                  Иконка
+                  <span className="block text-xs text-muted-foreground">Опционально</span>
+                </Label>
+                <Select name="icon" defaultValue={currentPrivilege?.icon || 'none'}>
+                  <SelectTrigger className="col-span-3 border-[#DF2456]/30 focus:ring-[#FB0D68]">
+                    <SelectValue placeholder="Выберите иконку" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="none">По умолчанию (от типа)</SelectItem>
+                    <SelectItem value="shield">Щит</SelectItem>
+                    <SelectItem value="command">Терминал</SelectItem>
+                    <SelectItem value="zap">Молния</SelectItem>
+                    <SelectItem value="gift">Подарок</SelectItem>
+                    <SelectItem value="rocket">Ракета</SelectItem>
+                    <SelectItem value="key">Ключ</SelectItem>
+                    <SelectItem value="crown">Корона</SelectItem>
+                    <SelectItem value="star">Звезда</SelectItem>
                   </SelectContent>
                 </Select>
               </div>

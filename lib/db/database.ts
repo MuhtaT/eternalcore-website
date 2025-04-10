@@ -88,10 +88,35 @@ export async function initDb() {
       description TEXT NOT NULL,
       permission VARCHAR(255) NOT NULL,
       command VARCHAR(255) NOT NULL,
+      price DECIMAL(10, 2) NULL DEFAULT NULL,
+      icon VARCHAR(50) NULL DEFAULT NULL,
       created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
       updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
     )
   `);
+  
+  // Проверяем, есть ли колонки price и icon в таблице привилегий
+  const [priceColumn] = await pool.query<mysql.RowDataPacket[]>(`
+    SHOW COLUMNS FROM forsell_privileges LIKE 'price'
+  `);
+  
+  if (priceColumn.length === 0) {
+    await pool.query(`
+      ALTER TABLE forsell_privileges ADD COLUMN price DECIMAL(10, 2) NULL DEFAULT NULL
+    `);
+    console.log('Added price column to forsell_privileges table');
+  }
+  
+  const [iconColumn] = await pool.query<mysql.RowDataPacket[]>(`
+    SHOW COLUMNS FROM forsell_privileges LIKE 'icon'
+  `);
+  
+  if (iconColumn.length === 0) {
+    await pool.query(`
+      ALTER TABLE forsell_privileges ADD COLUMN icon VARCHAR(50) NULL DEFAULT NULL
+    `);
+    console.log('Added icon column to forsell_privileges table');
+  }
   
   return pool;
 }
@@ -172,55 +197,90 @@ export async function deleteSession(sessionId: string) {
 
 // Получить все донат-пакеты
 export async function getAllDonatePackages(): Promise<DonatePackage[]> {
-  const pool = await getConnection();
-  const [rows] = await pool.query<any[]>("SELECT * FROM forsell_packages ORDER BY price ASC");
-  
-  return rows.map(row => ({
-    ...row,
-    features: row.features ? JSON.parse(row.features) : []
-  }));
+  try {
+    const pool = await getConnection();
+    const [rows] = await pool.query<any[]>("SELECT * FROM forsell_packages ORDER BY price ASC");
+    
+    // Логирование для отладки
+    console.log(`[DEBUG] getAllDonatePackages получено записей: ${rows.length}`);
+    
+    return rows.map(row => ({
+      ...row,
+      features: typeof row.features === 'string' ? row.features : JSON.stringify(row.features)
+    }));
+  } catch (error) {
+    console.error("Ошибка при получении донат-пакетов:", error);
+    return [];
+  }
 }
 
 // Получить донат-пакет по ID
 export async function getDonatePackageById(id: number): Promise<DonatePackage | null> {
-  const pool = await getConnection();
-  const [rows] = await pool.query<any[]>("SELECT * FROM forsell_packages WHERE id = ?", [id]);
-  
-  if (rows.length === 0) {
+  try {
+    const pool = await getConnection();
+    const [rows] = await pool.query<any[]>("SELECT * FROM forsell_packages WHERE id = ?", [id]);
+    
+    if (rows.length === 0) {
+      return null;
+    }
+    
+    return {
+      ...rows[0],
+      features: typeof rows[0].features === 'string' ? rows[0].features : JSON.stringify(rows[0].features)
+    };
+  } catch (error) {
+    console.error(`Ошибка при получении донат-пакета с ID ${id}:`, error);
     return null;
   }
-  
-  return {
-    ...rows[0],
-    features: rows[0].features ? JSON.parse(rows[0].features) : []
-  };
 }
 
 // Создать новый донат-пакет
 export async function createDonatePackage(
   packageData: Omit<DonatePackage, 'id' | 'created_at' | 'updated_at'>
 ): Promise<DonatePackage> {
-  const pool = await getConnection();
-  
-  // Преобразуем массив features в JSON-строку
-  const featuresJson = JSON.stringify(packageData.features);
-  
-  const [result] = await pool.query(
-    `INSERT INTO forsell_packages (name, price, description, status, \`group\`, features, command) 
-     VALUES (?, ?, ?, ?, ?, ?, ?)`,
-    [
-      packageData.name,
-      packageData.price,
-      packageData.description,
-      packageData.status,
-      packageData.group,
-      featuresJson,
-      packageData.command
-    ]
-  );
-  
-  const insertId = (result as any).insertId;
-  return getDonatePackageById(insertId) as Promise<DonatePackage>;
+  try {
+    const pool = await getConnection();
+    
+    // Убедимся, что features - это строка JSON
+    let featuresJson = packageData.features;
+    if (typeof packageData.features !== 'string') {
+      featuresJson = JSON.stringify(packageData.features);
+    }
+    
+    // Логирование для отладки
+    console.log(`[DEBUG] Создание донат-пакета:`, {
+      name: packageData.name,
+      price: packageData.price,
+      features: featuresJson
+    });
+    
+    const [result] = await pool.query(
+      `INSERT INTO forsell_packages (name, price, description, status, \`group\`, features, command) 
+       VALUES (?, ?, ?, ?, ?, ?, ?)`,
+      [
+        packageData.name,
+        packageData.price,
+        packageData.description,
+        packageData.status || 'normal',
+        packageData.group,
+        featuresJson,
+        packageData.command
+      ]
+    );
+    
+    const insertId = (result as any).insertId;
+    console.log(`[DEBUG] Создан донат-пакет с ID: ${insertId}`);
+    
+    const createdPackage = await getDonatePackageById(insertId);
+    if (!createdPackage) {
+      throw new Error('Не удалось получить созданный донат-пакет');
+    }
+    
+    return createdPackage;
+  } catch (error) {
+    console.error("Ошибка при создании донат-пакета:", error);
+    throw error;
+  }
 }
 
 // Обновить донат-пакет
@@ -228,107 +288,171 @@ export async function updateDonatePackage(
   id: number,
   packageData: Partial<Omit<DonatePackage, 'id' | 'created_at' | 'updated_at'>>
 ): Promise<boolean> {
-  const pool = await getConnection();
-  
-  const updateFields = [];
-  const updateValues = [];
-  
-  if (packageData.name !== undefined) {
-    updateFields.push('name = ?');
-    updateValues.push(packageData.name);
-  }
-  
-  if (packageData.price !== undefined) {
-    updateFields.push('price = ?');
-    updateValues.push(packageData.price);
-  }
-  
-  if (packageData.description !== undefined) {
-    updateFields.push('description = ?');
-    updateValues.push(packageData.description);
-  }
-  
-  if (packageData.status !== undefined) {
-    updateFields.push('status = ?');
-    updateValues.push(packageData.status);
-  }
-  
-  if (packageData.group !== undefined) {
-    updateFields.push('`group` = ?');
-    updateValues.push(packageData.group);
-  }
-  
-  if (packageData.features !== undefined) {
-    updateFields.push('features = ?');
-    updateValues.push(JSON.stringify(packageData.features));
-  }
-  
-  if (packageData.command !== undefined) {
-    updateFields.push('command = ?');
-    updateValues.push(packageData.command);
-  }
-  
-  // Если нет полей для обновления, возвращаем false
-  if (updateFields.length === 0) {
+  try {
+    const pool = await getConnection();
+    
+    const updateFields = [];
+    const updateValues = [];
+    
+    if (packageData.name !== undefined) {
+      updateFields.push('name = ?');
+      updateValues.push(packageData.name);
+    }
+    
+    if (packageData.price !== undefined) {
+      updateFields.push('price = ?');
+      updateValues.push(packageData.price);
+    }
+    
+    if (packageData.description !== undefined) {
+      updateFields.push('description = ?');
+      updateValues.push(packageData.description);
+    }
+    
+    if (packageData.status !== undefined) {
+      updateFields.push('status = ?');
+      updateValues.push(packageData.status);
+    }
+    
+    if (packageData.group !== undefined) {
+      updateFields.push('`group` = ?');
+      updateValues.push(packageData.group);
+    }
+    
+    if (packageData.features !== undefined) {
+      updateFields.push('features = ?');
+      // Убедимся, что features - это строка JSON
+      const featuresJson = typeof packageData.features === 'string' 
+        ? packageData.features 
+        : JSON.stringify(packageData.features);
+      updateValues.push(featuresJson);
+    }
+    
+    if (packageData.command !== undefined) {
+      updateFields.push('command = ?');
+      updateValues.push(packageData.command);
+    }
+    
+    // Если нет полей для обновления, возвращаем false
+    if (updateFields.length === 0) {
+      return false;
+    }
+    
+    // Логирование для отладки
+    console.log(`[DEBUG] Обновление донат-пакета ID ${id}:`, {
+      fields: updateFields,
+      values: updateValues
+    });
+    
+    const [result] = await pool.query(
+      `UPDATE forsell_packages SET ${updateFields.join(', ')} WHERE id = ?`,
+      [...updateValues, id]
+    );
+    
+    const success = (result as any).affectedRows > 0;
+    console.log(`[DEBUG] Результат обновления донат-пакета: ${success ? 'успех' : 'неудача'}`);
+    
+    return success;
+  } catch (error) {
+    console.error(`Ошибка при обновлении донат-пакета с ID ${id}:`, error);
     return false;
   }
-  
-  const [result] = await pool.query(
-    `UPDATE forsell_packages SET ${updateFields.join(', ')} WHERE id = ?`,
-    [...updateValues, id]
-  );
-  
-  return (result as any).affectedRows > 0;
 }
 
 // Удалить донат-пакет
 export async function deleteDonatePackage(id: number): Promise<boolean> {
-  const pool = await getConnection();
-  const [result] = await pool.query('DELETE FROM forsell_packages WHERE id = ?', [id]);
-  return (result as any).affectedRows > 0;
+  try {
+    const pool = await getConnection();
+    const [result] = await pool.query('DELETE FROM forsell_packages WHERE id = ?', [id]);
+    
+    const success = (result as any).affectedRows > 0;
+    console.log(`[DEBUG] Результат удаления донат-пакета ID ${id}: ${success ? 'успех' : 'неудача'}`);
+    
+    return success;
+  } catch (error) {
+    console.error(`Ошибка при удалении донат-пакета с ID ${id}:`, error);
+    return false;
+  }
 }
 
 // ============ Функции для работы с привилегиями ============
 
 // Получить все привилегии
 export async function getAllPrivileges(): Promise<Privilege[]> {
-  const pool = await getConnection();
-  const [rows] = await pool.query<any[]>("SELECT * FROM forsell_privileges ORDER BY name ASC");
-  return rows;
+  try {
+    const pool = await getConnection();
+    const [rows] = await pool.query<any[]>("SELECT * FROM forsell_privileges ORDER BY name ASC");
+    
+    // Логирование для отладки
+    console.log(`[DEBUG] getAllPrivileges получено записей: ${rows.length}`);
+    
+    return rows;
+  } catch (error) {
+    console.error("Ошибка при получении привилегий:", error);
+    return [];
+  }
 }
 
 // Получить привилегию по ID
 export async function getPrivilegeById(id: number): Promise<Privilege | null> {
-  const pool = await getConnection();
-  const [rows] = await pool.query<any[]>("SELECT * FROM forsell_privileges WHERE id = ?", [id]);
-  
-  if (rows.length === 0) {
+  try {
+    const pool = await getConnection();
+    const [rows] = await pool.query<any[]>("SELECT * FROM forsell_privileges WHERE id = ?", [id]);
+    
+    if (rows.length === 0) {
+      return null;
+    }
+    
+    return rows[0];
+  } catch (error) {
+    console.error(`Ошибка при получении привилегии с ID ${id}:`, error);
     return null;
   }
-  
-  return rows[0];
 }
 
 // Создать новую привилегию
 export async function createPrivilege(
   privilegeData: Omit<Privilege, 'id' | 'created_at' | 'updated_at'>
 ): Promise<Privilege> {
-  const pool = await getConnection();
-  
-  const [result] = await pool.query(
-    `INSERT INTO forsell_privileges (name, type, description, permission, command) 
-     VALUES (?, ?, ?, ?, ?)`,
-    [
-      privilegeData.name,
-      privilegeData.type,
-      privilegeData.description,
-      privilegeData.permission,
-      privilegeData.command
-    ]
-  );
-  
-  const insertId = (result as any).insertId;
-  return getPrivilegeById(insertId) as Promise<Privilege>;
+  try {
+    const pool = await getConnection();
+    
+    // Логирование для отладки
+    console.log(`[DEBUG] Создание привилегии:`, {
+      name: privilegeData.name,
+      type: privilegeData.type,
+      permission: privilegeData.permission,
+      price: privilegeData.price,
+      icon: privilegeData.icon
+    });
+    
+    const [result] = await pool.query(
+      `INSERT INTO forsell_privileges (name, type, description, permission, command, price, icon) 
+       VALUES (?, ?, ?, ?, ?, ?, ?)`,
+      [
+        privilegeData.name,
+        privilegeData.type,
+        privilegeData.description,
+        privilegeData.permission,
+        privilegeData.command,
+        privilegeData.price || null,
+        privilegeData.icon || null
+      ]
+    );
+    
+    const insertId = (result as any).insertId;
+    console.log(`[DEBUG] Создана привилегия с ID: ${insertId}`);
+    
+    const createdPrivilege = await getPrivilegeById(insertId);
+    if (!createdPrivilege) {
+      throw new Error('Не удалось получить созданную привилегию');
+    }
+    
+    return createdPrivilege;
+  } catch (error) {
+    console.error("Ошибка при создании привилегии:", error);
+    throw error;
+  }
 }
 
 // Обновить привилегию
@@ -336,54 +460,87 @@ export async function updatePrivilege(
   id: number,
   privilegeData: Partial<Omit<Privilege, 'id' | 'created_at' | 'updated_at'>>
 ): Promise<boolean> {
-  const pool = await getConnection();
-  
-  const updateFields = [];
-  const updateValues = [];
-  
-  if (privilegeData.name !== undefined) {
-    updateFields.push('name = ?');
-    updateValues.push(privilegeData.name);
-  }
-  
-  if (privilegeData.type !== undefined) {
-    updateFields.push('type = ?');
-    updateValues.push(privilegeData.type);
-  }
-  
-  if (privilegeData.description !== undefined) {
-    updateFields.push('description = ?');
-    updateValues.push(privilegeData.description);
-  }
-  
-  if (privilegeData.permission !== undefined) {
-    updateFields.push('permission = ?');
-    updateValues.push(privilegeData.permission);
-  }
-  
-  if (privilegeData.command !== undefined) {
-    updateFields.push('command = ?');
-    updateValues.push(privilegeData.command);
-  }
-  
-  // Если нет полей для обновления, возвращаем false
-  if (updateFields.length === 0) {
+  try {
+    const pool = await getConnection();
+    
+    const updateFields = [];
+    const updateValues = [];
+    
+    if (privilegeData.name !== undefined) {
+      updateFields.push('name = ?');
+      updateValues.push(privilegeData.name);
+    }
+    
+    if (privilegeData.type !== undefined) {
+      updateFields.push('type = ?');
+      updateValues.push(privilegeData.type);
+    }
+    
+    if (privilegeData.description !== undefined) {
+      updateFields.push('description = ?');
+      updateValues.push(privilegeData.description);
+    }
+    
+    if (privilegeData.permission !== undefined) {
+      updateFields.push('permission = ?');
+      updateValues.push(privilegeData.permission);
+    }
+    
+    if (privilegeData.command !== undefined) {
+      updateFields.push('command = ?');
+      updateValues.push(privilegeData.command);
+    }
+    
+    if (privilegeData.price !== undefined) {
+      updateFields.push('price = ?');
+      updateValues.push(privilegeData.price);
+    }
+    
+    if (privilegeData.icon !== undefined) {
+      updateFields.push('icon = ?');
+      updateValues.push(privilegeData.icon);
+    }
+    
+    // Если нет полей для обновления, возвращаем false
+    if (updateFields.length === 0) {
+      return false;
+    }
+    
+    // Логирование для отладки
+    console.log(`[DEBUG] Обновление привилегии ID ${id}:`, {
+      fields: updateFields,
+      values: updateValues
+    });
+    
+    const [result] = await pool.query(
+      `UPDATE forsell_privileges SET ${updateFields.join(', ')} WHERE id = ?`,
+      [...updateValues, id]
+    );
+    
+    const success = (result as any).affectedRows > 0;
+    console.log(`[DEBUG] Результат обновления привилегии: ${success ? 'успех' : 'неудача'}`);
+    
+    return success;
+  } catch (error) {
+    console.error(`Ошибка при обновлении привилегии с ID ${id}:`, error);
     return false;
   }
-  
-  const [result] = await pool.query(
-    `UPDATE forsell_privileges SET ${updateFields.join(', ')} WHERE id = ?`,
-    [...updateValues, id]
-  );
-  
-  return (result as any).affectedRows > 0;
 }
 
 // Удалить привилегию
 export async function deletePrivilege(id: number): Promise<boolean> {
-  const pool = await getConnection();
-  const [result] = await pool.query('DELETE FROM forsell_privileges WHERE id = ?', [id]);
-  return (result as any).affectedRows > 0;
+  try {
+    const pool = await getConnection();
+    const [result] = await pool.query('DELETE FROM forsell_privileges WHERE id = ?', [id]);
+    
+    const success = (result as any).affectedRows > 0;
+    console.log(`[DEBUG] Результат удаления привилегии ID ${id}: ${success ? 'успех' : 'неудача'}`);
+    
+    return success;
+  } catch (error) {
+    console.error(`Ошибка при удалении привилегии с ID ${id}:`, error);
+    return false;
+  }
 }
 
 // Инициализация базы данных при импорте модуля

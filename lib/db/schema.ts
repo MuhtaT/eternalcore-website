@@ -36,6 +36,8 @@ export type Privilege = {
   description: string;
   permission: string;
   command: string;
+  price?: number; // Цена за привилегию
+  icon?: string; // Имя иконки для отображения
   created_at: string;
   updated_at: string;
 }; 
