@@ -8,7 +8,7 @@ import { Button } from "@/components/ui/button"
 import { getAllDonatePackages, getAllPrivileges } from "@/lib/db/database"
 import { DonatePackageCard, PrivilegeCard } from "@/components/client-donate-components"
 
-export const revalidate = 3600; // Revalidate every hour
+export const revalidate = 600; // Revalidate every 10 minutes (was 3600)
 
 // Добавляем типы для правильной обработки данных
 interface DonatePackage {

@@ -660,12 +660,34 @@ export function AdminPanel({ users: initialUsers }: AdminPanelProps) {
   // Обновление донат-пакета через API
   const updateDonatePackage = async (id: number, packageData: any) => {
     try {
+      // Проверка и преобразование features, чтобы избежать ошибки s.join is not a function
+      let features = packageData.features;
+      if (features !== undefined) {
+        // Убедимся, что features - это строка JSON
+        if (typeof features !== 'string') {
+          features = JSON.stringify(features);
+        } else {
+          try {
+            // Проверяем, что это валидный JSON
+            JSON.parse(features);
+          } catch (e) {
+            // Если не валидный JSON, делаем массив и преобразуем в строку
+            features = JSON.stringify(["Базовая привилегия"]);
+          }
+        }
+      }
+
+      const updatedData = {
+        ...packageData,
+        features
+      };
+
       const response = await fetch('/api/donate/packages', {
         method: 'PUT',
         headers: {
           'Content-Type': 'application/json',
         },
-        body: JSON.stringify({ id, ...packageData }),
+        body: JSON.stringify({ id, ...updatedData }),
       });
       
       if (!response.ok) {
@@ -675,7 +697,7 @@ export function AdminPanel({ users: initialUsers }: AdminPanelProps) {
       
       // Обновляем локальное состояние
       setDonatePackages(donatePackages.map(pkg => 
-        pkg.id === id ? { ...pkg, ...packageData } : pkg
+        pkg.id === id ? { ...pkg, ...updatedData } : pkg
       ));
       
       showSuccess({
@@ -2091,14 +2113,46 @@ export function AdminPanel({ users: initialUsers }: AdminPanelProps) {
           
           <TabsContent value="donate" className="space-y-6">
             <Card className="border-[#DF2456]/20 shadow-md">
-              <CardHeader>
-                <CardTitle className="flex items-center">
-                  <Gift className="mr-2 h-5 w-5 text-[#DF2456]" />
-                  Управление донатом
-                </CardTitle>
-                <CardDescription>
-                  Управление донат-пакетами и привилегиями на сервере
-                </CardDescription>
+              <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                <div>
+                  <CardTitle className="flex items-center">
+                    <Gift className="mr-2 h-5 w-5 text-[#DF2456]" />
+                    Управление донатом
+                  </CardTitle>
+                  <CardDescription>
+                    Управление донат-пакетами и привилегиями на сервере
+                  </CardDescription>
+                </div>
+                <Button
+                  onClick={() => {
+                    fetch('/api/revalidate?path=/donate', { method: 'POST' })
+                      .then(res => {
+                        if (res.ok) {
+                          showSuccess({
+                            type: 'success',
+                            title: 'Страница обновлена',
+                            message: 'Страница донатов успешно обновлена. Изменения станут видны для пользователей.',
+                            variant: 'default'
+                          });
+                        } else {
+                          throw new Error('Не удалось обновить страницу донатов');
+                        }
+                      })
+                      .catch(err => {
+                        showError({
+                          type: 'general',
+                          title: 'Ошибка обновления',
+                          message: err.message || 'Не удалось обновить страницу донатов',
+                          variant: 'destructive'
+                        });
+                      });
+                  }}
+                  variant="outline"
+                  className="flex items-center space-x-1"
+                >
+                  <RefreshCw className="w-4 h-4 mr-2" />
+                  Обновить страницу донатов
+                </Button>
               </CardHeader>
               <CardContent>
                 <Tabs defaultValue="packages" className="w-full">
@@ -2754,14 +2808,20 @@ export function AdminPanel({ users: initialUsers }: AdminPanelProps) {
             const form = e.target as HTMLFormElement;
             const formData = new FormData(form);
             
+            // Обрабатываем features - преобразуем из текста с новыми строками в массив JSON
+            const featuresText = formData.get('features') as string;
+            const featuresArray = featuresText
+              .split('\n')
+              .map(line => line.trim())
+              .filter(line => line); // удаляем пустые строки
+            
             const packageData = {
-              id: currentPackage?.id,
               name: formData.get('name') as string,
               price: Number(formData.get('price')),
               description: formData.get('description') as string,
               status: formData.get('status') as string,
               group: formData.get('group') as string,
-              features: JSON.stringify((formData.get('features') as string).split('\n').filter(Boolean)),
+              features: JSON.stringify(featuresArray), // преобразуем в JSON строку
               command: formData.get('command') as string
             };
             
@@ -2872,7 +2932,27 @@ export function AdminPanel({ users: initialUsers }: AdminPanelProps) {
                   name="features" 
                   placeholder="Кит VIP каждые 24 часа&#10;Команда /fly&#10;10 приватных регионов"
                   className="col-span-3 min-h-[100px] border-[#DF2456]/30 focus-visible:ring-[#FB0D68]"
-                  defaultValue={currentPackage?.features?.join('\n') || ''}
+                  defaultValue={
+                    (() => {
+                      try {
+                        // Проверяем, если это строка JSON, то парсим ее
+                        if (currentPackage?.features && typeof currentPackage.features === 'string') {
+                          const parsed = JSON.parse(currentPackage.features);
+                          if (Array.isArray(parsed)) {
+                            return parsed.join('\n');
+                          }
+                        }
+                        // Если это массив, конвертируем в строки
+                        if (currentPackage?.features && Array.isArray(currentPackage.features)) {
+                          return currentPackage.features.join('\n');
+                        }
+                        return '';
+                      } catch (e) {
+                        console.error("Ошибка при обработке features:", e);
+                        return '';
+                      }
+                    })()
+                  }
                   required
                 />
               </div>
