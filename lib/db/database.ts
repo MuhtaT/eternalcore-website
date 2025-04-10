@@ -1,5 +1,14 @@
 import mysql from 'mysql2/promise';
-import { User, Session, DonatePackage, Privilege } from './schema';
+import { 
+  User, 
+  DonatePackage, 
+  Privilege,
+  anticheatDetectionSchema,
+  staffActivitySchema,
+  staffConnectionSchema,
+  serverLogsSchema,
+  serverMetricsSchema
+} from './schema';
 
 // Параметры подключения к MySQL
 const dbConfig = {
@@ -543,5 +552,357 @@ export async function deletePrivilege(id: number): Promise<boolean> {
   }
 }
 
+// ========== Функции для работы с вебхуками Minecraft ==========
+
+// Сохранение детекта античита
+export async function saveAnticheatDetection(data: {
+  player: string;
+  detection_type: string;
+  description: string;
+  level: number;
+  timestamp: number;
+  action: string;
+}): Promise<boolean> {
+  try {
+    const pool = await getConnection();
+    await pool.query(
+      `INSERT INTO anticheat_detections 
+       (player, detection_type, description, level, timestamp, action) 
+       VALUES (?, ?, ?, ?, ?, ?)`,
+      [
+        data.player,
+        data.detection_type,
+        data.description,
+        data.level,
+        data.timestamp,
+        data.action
+      ]
+    );
+    return true;
+  } catch (error) {
+    console.error("Ошибка при сохранении детекта античита:", error);
+    return false;
+  }
+}
+
+// Получение детектов античита
+export async function getAnticheatDetections(limit = 100): Promise<any[]> {
+  try {
+    const pool = await getConnection();
+    const [rows] = await pool.query<any[]>(
+      `SELECT * FROM anticheat_detections ORDER BY timestamp DESC LIMIT ?`,
+      [limit]
+    );
+    return rows;
+  } catch (error) {
+    console.error("Ошибка при получении детектов античита:", error);
+    return [];
+  }
+}
+
+// Сохранение активности персонала
+export async function saveStaffActivity(data: {
+  staff_name: string;
+  action_type: string;
+  target_player?: string;
+  duration?: string;
+  reason?: string;
+  timestamp: number;
+}): Promise<boolean> {
+  try {
+    const pool = await getConnection();
+    await pool.query(
+      `INSERT INTO staff_activity 
+       (staff_name, action_type, target_player, duration, reason, timestamp) 
+       VALUES (?, ?, ?, ?, ?, ?)`,
+      [
+        data.staff_name,
+        data.action_type,
+        data.target_player || null,
+        data.duration || null,
+        data.reason || null,
+        data.timestamp
+      ]
+    );
+    return true;
+  } catch (error) {
+    console.error("Ошибка при сохранении активности персонала:", error);
+    return false;
+  }
+}
+
+// Получение активности персонала
+export async function getStaffActivity(limit = 100): Promise<any[]> {
+  try {
+    const pool = await getConnection();
+    const [rows] = await pool.query<any[]>(
+      `SELECT * FROM staff_activity ORDER BY timestamp DESC LIMIT ?`,
+      [limit]
+    );
+    return rows;
+  } catch (error) {
+    console.error("Ошибка при получении активности персонала:", error);
+    return [];
+  }
+}
+
+// Сохранение входа/выхода персонала
+export async function saveStaffConnection(data: {
+  staff_name: string;
+  action: 'join' | 'leave';
+  timestamp: number;
+}): Promise<boolean> {
+  try {
+    const pool = await getConnection();
+    await pool.query(
+      `INSERT INTO staff_connections 
+       (staff_name, action, timestamp) 
+       VALUES (?, ?, ?)`,
+      [
+        data.staff_name,
+        data.action,
+        data.timestamp
+      ]
+    );
+    return true;
+  } catch (error) {
+    console.error("Ошибка при сохранении входа/выхода персонала:", error);
+    return false;
+  }
+}
+
+// Получение входов/выходов персонала
+export async function getStaffConnections(limit = 100): Promise<any[]> {
+  try {
+    const pool = await getConnection();
+    const [rows] = await pool.query<any[]>(
+      `SELECT * FROM staff_connections ORDER BY timestamp DESC LIMIT ?`,
+      [limit]
+    );
+    return rows;
+  } catch (error) {
+    console.error("Ошибка при получении входов/выходов персонала:", error);
+    return [];
+  }
+}
+
+// Сохранение лога сервера
+export async function saveServerLog(data: {
+  log_type: string;
+  player_name?: string;
+  auth_type?: string;
+  message?: string;
+  timestamp: number;
+}): Promise<boolean> {
+  try {
+    const pool = await getConnection();
+    await pool.query(
+      `INSERT INTO server_logs 
+       (log_type, player_name, auth_type, message, timestamp) 
+       VALUES (?, ?, ?, ?, ?)`,
+      [
+        data.log_type,
+        data.player_name || null,
+        data.auth_type || null,
+        data.message || null,
+        data.timestamp
+      ]
+    );
+    return true;
+  } catch (error) {
+    console.error("Ошибка при сохранении лога сервера:", error);
+    return false;
+  }
+}
+
+// Получение логов сервера
+export async function getServerLogs(logType?: string, limit = 100): Promise<any[]> {
+  try {
+    const pool = await getConnection();
+    let query = `SELECT * FROM server_logs`;
+    const params: any[] = [];
+    
+    if (logType) {
+      query += ` WHERE log_type = ?`;
+      params.push(logType);
+    }
+    
+    query += ` ORDER BY timestamp DESC LIMIT ?`;
+    params.push(limit);
+    
+    const [rows] = await pool.query<any[]>(query, params);
+    return rows;
+  } catch (error) {
+    console.error("Ошибка при получении логов сервера:", error);
+    return [];
+  }
+}
+
+// Сохранение метрики онлайна
+export async function saveServerOnline(data: {
+  online_players: number;
+  timestamp: number;
+}): Promise<boolean> {
+  try {
+    const pool = await getConnection();
+    await pool.query(
+      `INSERT INTO server_metrics 
+       (online_players, timestamp) 
+       VALUES (?, ?)`,
+      [
+        data.online_players,
+        data.timestamp
+      ]
+    );
+    return true;
+  } catch (error) {
+    console.error("Ошибка при сохранении метрики онлайна:", error);
+    return false;
+  }
+}
+
+// Получение последних метрик онлайна
+export async function getServerOnlineMetrics(hoursAgo = 24): Promise<any[]> {
+  try {
+    const pool = await getConnection();
+    const timestamp = Math.floor(Date.now() / 1000) - (hoursAgo * 3600);
+    
+    const [rows] = await pool.query<any[]>(
+      `SELECT * FROM server_metrics 
+       WHERE timestamp > ? 
+       ORDER BY timestamp ASC`,
+      [timestamp]
+    );
+    return rows;
+  } catch (error) {
+    console.error("Ошибка при получении метрик онлайна:", error);
+    return [];
+  }
+}
+
 // Инициализация базы данных при импорте модуля
-initDb().catch(console.error); 
+async function initDatabase() {
+  try {
+    const pool = await getConnection();
+
+    // Создаем таблицу пользователей
+    await pool.query(`
+      CREATE TABLE IF NOT EXISTS users (
+        id INT AUTO_INCREMENT PRIMARY KEY,
+        name VARCHAR(255) NOT NULL,
+        email VARCHAR(255) NOT NULL UNIQUE,
+        password VARCHAR(255) NOT NULL,
+        image VARCHAR(255),
+        role VARCHAR(50) DEFAULT 'user',
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+      )
+    `);
+    
+    // Проверяем, есть ли колонка role
+    const [columns] = await pool.query<mysql.RowDataPacket[]>(`
+      SHOW COLUMNS FROM users LIKE 'role'
+    `);
+    
+    // Если колонки role нет, добавляем её
+    if (columns.length === 0) {
+      await pool.query(`
+        ALTER TABLE users ADD COLUMN role VARCHAR(50) DEFAULT 'user'
+      `);
+      console.log('Added role column to users table');
+    }
+    
+    // Создаем таблицу сессий
+    await pool.query(`
+      CREATE TABLE IF NOT EXISTS sessions (
+        id VARCHAR(255) PRIMARY KEY,
+        userId INT NOT NULL,
+        expires TIMESTAMP NOT NULL,
+        FOREIGN KEY (userId) REFERENCES users(id) ON DELETE CASCADE
+      )
+    `);
+    
+    // Создаем таблицу донат-пакетов
+    await pool.query(`
+      CREATE TABLE IF NOT EXISTS forsell_packages (
+        id INT AUTO_INCREMENT PRIMARY KEY,
+        name VARCHAR(255) NOT NULL,
+        price DECIMAL(10, 2) NOT NULL,
+        description TEXT NOT NULL,
+        status VARCHAR(50) DEFAULT 'normal',
+        \`group\` VARCHAR(100) NOT NULL,
+        features TEXT NOT NULL,
+        command VARCHAR(255) NOT NULL,
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+        updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
+      )
+    `);
+
+    // Создаем таблицу привилегий
+    await pool.query(`
+      CREATE TABLE IF NOT EXISTS forsell_privileges (
+        id INT AUTO_INCREMENT PRIMARY KEY,
+        name VARCHAR(255) NOT NULL,
+        type VARCHAR(50) NOT NULL,
+        description TEXT NOT NULL,
+        permission VARCHAR(255) NOT NULL,
+        command VARCHAR(255) NOT NULL,
+        price DECIMAL(10, 2) NULL DEFAULT NULL,
+        icon VARCHAR(50) NULL DEFAULT NULL,
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+        updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
+      )
+    `);
+    
+    // Проверяем, есть ли колонки price и icon в таблице привилегий
+    const [priceColumn] = await pool.query<mysql.RowDataPacket[]>(`
+      SHOW COLUMNS FROM forsell_privileges LIKE 'price'
+    `);
+    
+    if (priceColumn.length === 0) {
+      await pool.query(`
+        ALTER TABLE forsell_privileges ADD COLUMN price DECIMAL(10, 2) NULL DEFAULT NULL
+      `);
+      console.log('Added price column to forsell_privileges table');
+    }
+    
+    const [iconColumn] = await pool.query<mysql.RowDataPacket[]>(`
+      SHOW COLUMNS FROM forsell_privileges LIKE 'icon'
+    `);
+    
+    if (iconColumn.length === 0) {
+      await pool.query(`
+        ALTER TABLE forsell_privileges ADD COLUMN icon VARCHAR(50) NULL DEFAULT NULL
+      `);
+      console.log('Added icon column to forsell_privileges table');
+    }
+
+    // Создание таблиц для вебхуков от Minecraft сервера
+    const webhookTables = [
+      anticheatDetectionSchema,
+      staffActivitySchema,
+      staffConnectionSchema,
+      serverLogsSchema,
+      serverMetricsSchema
+    ];
+
+    for (const table of webhookTables) {
+      await pool.query(`
+        CREATE TABLE IF NOT EXISTS ${table.tableName} (
+          ${table.columns}
+        ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+      `);
+      console.log(`Таблица ${table.tableName} создана или уже существует`);
+    }
+    
+    console.log('Инициализация базы данных завершена успешно');
+    return pool;
+  } catch (error) {
+    console.error('Ошибка при инициализации базы данных:', error);
+    throw error;
+  }
+}
+
+initDatabase().catch(error => {
+  console.error('Критическая ошибка при инициализации базы данных:', error);
+  process.exit(1); // Завершаем процесс в случае критической ошибки
+}); 

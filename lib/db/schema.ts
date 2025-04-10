@@ -41,3 +41,70 @@ export type Privilege = {
   created_at: string;
   updated_at: string;
 }; 
+
+// Таблица для хранения детектов античита
+export const anticheatDetectionSchema = {
+  tableName: 'anticheat_detections',
+  columns: `
+    id INT AUTO_INCREMENT PRIMARY KEY,
+    player VARCHAR(36) NOT NULL,
+    detection_type VARCHAR(100) NOT NULL,
+    description TEXT,
+    level INT NOT NULL,
+    timestamp BIGINT NOT NULL,
+    action VARCHAR(50) NOT NULL,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+  `
+};
+
+// Таблица для хранения активности персонала
+export const staffActivitySchema = {
+  tableName: 'staff_activity',
+  columns: `
+    id INT AUTO_INCREMENT PRIMARY KEY,
+    staff_name VARCHAR(36) NOT NULL,
+    action_type VARCHAR(50) NOT NULL,
+    target_player VARCHAR(36),
+    duration VARCHAR(50),
+    reason TEXT,
+    timestamp BIGINT NOT NULL,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+  `
+};
+
+// Таблица для хранения входов/выходов персонала
+export const staffConnectionSchema = {
+  tableName: 'staff_connections',
+  columns: `
+    id INT AUTO_INCREMENT PRIMARY KEY,
+    staff_name VARCHAR(36) NOT NULL,
+    action VARCHAR(10) NOT NULL,
+    timestamp BIGINT NOT NULL,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+  `
+};
+
+// Таблица для хранения логов сервера
+export const serverLogsSchema = {
+  tableName: 'server_logs',
+  columns: `
+    id INT AUTO_INCREMENT PRIMARY KEY,
+    log_type VARCHAR(50) NOT NULL,
+    player_name VARCHAR(36),
+    auth_type VARCHAR(50),
+    message TEXT,
+    timestamp BIGINT NOT NULL,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+  `
+};
+
+// Таблица для метрик сервера
+export const serverMetricsSchema = {
+  tableName: 'server_metrics',
+  columns: `
+    id INT AUTO_INCREMENT PRIMARY KEY,
+    online_players INT NOT NULL,
+    timestamp BIGINT NOT NULL,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+  `
+}; 
