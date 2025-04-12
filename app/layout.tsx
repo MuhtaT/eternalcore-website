@@ -67,6 +67,12 @@ export default function RootLayout({
                         >
                           Правила
                         </Link>
+                        <Link
+                          href="/contacts"
+                          className="flex items-center text-lg font-medium transition-colors hover:text-foreground/80 text-foreground/60"
+                        >
+                          Контакты
+                        </Link>
                       </nav>
                     </div>
                     <div className="flex flex-1 items-center justify-end space-x-4">
@@ -98,12 +104,28 @@ export default function RootLayout({
                       <Link href="/rules" className="text-sm font-medium hover:underline">
                         Правила
                       </Link>
+                      <Link href="/contacts" className="text-sm font-medium hover:underline">
+                        Контакты
+                      </Link>
                       <Link href="/legal/privacy-policy" className="text-sm font-medium hover:underline">
                         Политика конфиденциальности
                       </Link>
                       <Link href="/legal/terms-of-service" className="text-sm font-medium hover:underline">
                         Пользовательское соглашение
                       </Link>
+                      <Link href="/legal/offer-agreement" className="text-sm font-medium hover:underline">
+                        Договор оферты
+                      </Link>
+                    </div>
+                  </div>
+                  <div className="container mt-4">
+                    <div className="border-t pt-4">
+                      <p className="text-center text-xs text-muted-foreground">
+                        EternalCore не связан и не поддерживается Mojang AB, Microsoft или любой другой компанией, связанной с Minecraft. "Minecraft" является товарным знаком Mojang AB.
+                      </p>
+                      <p className="text-center text-xs text-muted-foreground mt-2">
+                        Все продажи виртуальных товаров на данном сервере представляют собой лицензию на использование цифровой интеллектуальной собственности EternalCore. Покупая донат-пакеты или привилегии, вы приобретаете право на использование дополнительных игровых возможностей на условиях, описанных в договоре оферты.
+                      </p>
                     </div>
                   </div>
                 </footer>

@@ -7,7 +7,11 @@ import {
   staffActivitySchema,
   staffConnectionSchema,
   serverLogsSchema,
-  serverMetricsSchema
+  serverMetricsSchema,
+  minecraftAccountsSchema,
+  authCodesSchema,
+  MinecraftAccount,
+  AuthCode
 } from './schema';
 
 // Параметры подключения к MySQL
@@ -35,6 +39,25 @@ export async function getConnection() {
 // Инициализация таблиц
 export async function initDb() {
   const pool = await getConnection();
+  
+  // Создаем таблицы для привязки аккаунтов Minecraft
+  console.log('Инициализация таблиц для аккаунтов Minecraft...');
+  
+  // Создаем таблицу привязки аккаунтов Minecraft
+  await pool.query(`
+    CREATE TABLE IF NOT EXISTS ${minecraftAccountsSchema.tableName} (
+      ${minecraftAccountsSchema.columns}
+    )
+  `);
+  
+  // Создаем таблицу для временных кодов авторизации
+  await pool.query(`
+    CREATE TABLE IF NOT EXISTS ${authCodesSchema.tableName} (
+      ${authCodesSchema.columns}
+    )
+  `);
+  
+  console.log('Таблицы для привязки Minecraft-аккаунтов успешно созданы или уже существуют');
   
   // Создаем таблицу пользователей
   await pool.query(`
@@ -780,10 +803,239 @@ export async function getServerOnlineMetrics(hoursAgo = 24): Promise<any[]> {
   }
 }
 
+// Функции для работы с привязкой Minecraft-аккаунтов
+
+/**
+ * Инициализирует таблицы для привязки аккаунтов Minecraft
+ */
+export async function initMinecraftTables() {
+  const pool = await getConnection();
+  
+  // Создаем таблицу привязки аккаунтов Minecraft
+  await pool.query(`
+    CREATE TABLE IF NOT EXISTS ${minecraftAccountsSchema.tableName} (
+      ${minecraftAccountsSchema.columns}
+    )
+  `);
+  
+  // Создаем таблицу для временных кодов авторизации
+  await pool.query(`
+    CREATE TABLE IF NOT EXISTS ${authCodesSchema.tableName} (
+      ${authCodesSchema.columns}
+    )
+  `);
+  
+  console.log('Minecraft account linking tables initialized');
+}
+
+/**
+ * Генерирует случайный код авторизации для привязки Minecraft-аккаунта
+ */
+export async function generateAuthCode(userId: number, minecraftUsername: string): Promise<string> {
+  const pool = await getConnection();
+  
+  // Генерируем 6-значный буквенно-цифровой код
+  const characters = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789';
+  let authCode = '';
+  for (let i = 0; i < 6; i++) {
+    authCode += characters.charAt(Math.floor(Math.random() * characters.length));
+  }
+  
+  // Устанавливаем срок действия кода - 15 минут
+  const expiresAt = new Date();
+  expiresAt.setMinutes(expiresAt.getMinutes() + 15);
+  
+  // Удаляем старые коды для этого пользователя
+  await pool.query(
+    `DELETE FROM ${authCodesSchema.tableName} WHERE user_id = ?`,
+    [userId]
+  );
+  
+  // Добавляем новый код в базу данных
+  await pool.query(
+    `INSERT INTO ${authCodesSchema.tableName} (user_id, minecraft_username, auth_code, expires_at) 
+     VALUES (?, ?, ?, ?)`,
+    [userId, minecraftUsername, authCode, expiresAt]
+  );
+  
+  return authCode;
+}
+
+/**
+ * Проверяет код авторизации и привязывает Minecraft-аккаунт к аккаунту на сайте
+ */
+export async function verifyAndLinkMinecraftAccount(authCode: string, minecraftUsername: string): Promise<boolean> {
+  const pool = await getConnection();
+  
+  // Получаем действительный код
+  const [codes] = await pool.query<mysql.RowDataPacket[]>(
+    `SELECT * FROM ${authCodesSchema.tableName} 
+     WHERE auth_code = ? AND minecraft_username = ? AND expires_at > NOW() AND is_used = FALSE`,
+    [authCode, minecraftUsername]
+  );
+  
+  if (codes.length === 0) {
+    return false;
+  }
+  
+  const code = codes[0];
+  
+  // Помечаем код как использованный
+  await pool.query(
+    `UPDATE ${authCodesSchema.tableName} SET is_used = TRUE WHERE id = ?`,
+    [code.id]
+  );
+  
+  // Проверяем, существует ли уже запись для этого Minecraft-аккаунта
+  const [existingAccounts] = await pool.query<mysql.RowDataPacket[]>(
+    `SELECT * FROM ${minecraftAccountsSchema.tableName} WHERE minecraft_username = ?`,
+    [minecraftUsername]
+  );
+  
+  if (existingAccounts.length > 0) {
+    // Если аккаунт уже привязан к другому пользователю, обновляем привязку
+    await pool.query(
+      `UPDATE ${minecraftAccountsSchema.tableName} SET user_id = ? WHERE minecraft_username = ?`,
+      [code.user_id, minecraftUsername]
+    );
+  } else {
+    // Создаем новую запись о привязке аккаунта
+    await pool.query(
+      `INSERT INTO ${minecraftAccountsSchema.tableName} 
+      (user_id, minecraft_username) VALUES (?, ?)`,
+      [code.user_id, minecraftUsername]
+    );
+  }
+  
+  return true;
+}
+
+/**
+ * Проверяет, привязан ли Minecraft-аккаунт к данному пользователю
+ */
+export async function getUserMinecraftAccount(userId: number): Promise<MinecraftAccount | null> {
+  const pool = await getConnection();
+  
+  const [accounts] = await pool.query<mysql.RowDataPacket[]>(
+    `SELECT * FROM ${minecraftAccountsSchema.tableName} WHERE user_id = ?`,
+    [userId]
+  );
+  
+  return accounts.length > 0 ? accounts[0] as MinecraftAccount : null;
+}
+
+/**
+ * Получает данные пользователя по имени Minecraft-аккаунта
+ */
+export async function getUserByMinecraftUsername(minecraftUsername: string): Promise<{user: User, minecraftAccount: MinecraftAccount} | null> {
+  const pool = await getConnection();
+  
+  const [accounts] = await pool.query<mysql.RowDataPacket[]>(
+    `SELECT ma.*, u.* FROM ${minecraftAccountsSchema.tableName} ma
+     JOIN users u ON ma.user_id = u.id
+     WHERE ma.minecraft_username = ?`,
+    [minecraftUsername]
+  );
+  
+  if (accounts.length === 0) {
+    return null;
+  }
+  
+  const row = accounts[0];
+  
+  return {
+    user: {
+      id: row.user_id,
+      name: row.name,
+      email: row.email,
+      password: row.password,
+      image: row.image,
+      role: row.role,
+      created_at: row.created_at
+    },
+    minecraftAccount: {
+      id: row.id,
+      user_id: row.user_id,
+      minecraft_username: row.minecraft_username,
+      last_online: row.last_online,
+      playtime_minutes: row.playtime_minutes,
+      achievements_count: row.achievements_count,
+      balance: row.balance,
+      privilege: row.privilege,
+      total_donated: row.total_donated,
+      created_at: row.created_at,
+      updated_at: row.updated_at
+    }
+  };
+}
+
+/**
+ * Обновляет данные Minecraft-аккаунта
+ */
+export async function updateMinecraftAccountData(
+  minecraftUsername: string, 
+  data: Partial<Omit<MinecraftAccount, 'id' | 'user_id' | 'minecraft_username' | 'created_at' | 'updated_at'>>
+): Promise<boolean> {
+  const pool = await getConnection();
+  
+  // Формируем динамический запрос на обновление
+  const entries = Object.entries(data).filter(([_, value]) => value !== undefined);
+  
+  if (entries.length === 0) {
+    return false;
+  }
+  
+  const setClause = entries.map(([key]) => `${key} = ?`).join(', ');
+  const values = entries.map(([_, value]) => value);
+  
+  // Добавляем имя пользователя в конец массива значений
+  values.push(minecraftUsername);
+  
+  const [result] = await pool.query<mysql.ResultSetHeader>(
+    `UPDATE ${minecraftAccountsSchema.tableName} SET ${setClause} WHERE minecraft_username = ?`,
+    values
+  );
+  
+  return result.affectedRows > 0;
+}
+
+/**
+ * Отвязывает Minecraft-аккаунт от аккаунта пользователя
+ */
+export async function unlinkMinecraftAccount(userId: number): Promise<boolean> {
+  const pool = await getConnection();
+  
+  const [result] = await pool.query<mysql.ResultSetHeader>(
+    `DELETE FROM ${minecraftAccountsSchema.tableName} WHERE user_id = ?`,
+    [userId]
+  );
+  
+  return result.affectedRows > 0;
+}
+
 // Инициализация базы данных при импорте модуля
 async function initDatabase() {
   try {
     const pool = await getConnection();
+
+    // Создаем таблицы для привязки аккаунтов Minecraft
+    console.log('Инициализация таблиц для аккаунтов Minecraft...');
+    
+    // Создаем таблицу привязки аккаунтов Minecraft
+    await pool.query(`
+      CREATE TABLE IF NOT EXISTS ${minecraftAccountsSchema.tableName} (
+        ${minecraftAccountsSchema.columns}
+      )
+    `);
+    
+    // Создаем таблицу для временных кодов авторизации
+    await pool.query(`
+      CREATE TABLE IF NOT EXISTS ${authCodesSchema.tableName} (
+        ${authCodesSchema.columns}
+      )
+    `);
+    
+    console.log('Таблицы для привязки Minecraft-аккаунтов успешно созданы или уже существуют');
 
     // Создаем таблицу пользователей
     await pool.query(`

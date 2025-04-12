@@ -7,6 +7,7 @@ import Image from "next/image"
 import { CopyButton } from "@/components/copy-button"
 import { AuthButton } from "@/components/auth-button"
 import { PlayDialog } from "@/components/play-dialog"
+import { OnlineStatus } from "@/components/online-status"
 
 export default function Home() {
   const serverIP = "play.eternalcore.ru"
@@ -92,15 +93,14 @@ export default function Home() {
                         Начать играть
                       </Button>
                     </PlayDialog>
-                    <Button variant="outline" className="border-[#DF2456]/50 hover:bg-[#DF2456]/10">
-                      Узнать больше
-                    </Button>
+                    <Link href="/about">
+                      <Button variant="outline" className="border-[#DF2456]/50 hover:bg-[#DF2456]/10">
+                        Узнать больше
+                      </Button>
+                    </Link>
                   </div>
                   <div className="flex flex-wrap items-center gap-2 text-sm text-white">
-                    <div className="flex items-center rounded-full bg-black border border-[#1e1e1e] px-3 py-1.5">
-                      <div className="mr-1.5 h-2 w-2 rounded-full bg-green-500"></div>
-                      Онлайн: 128
-                    </div>
+                    <OnlineStatus />
                     <div className="flex items-center rounded-full bg-black border border-[#1e1e1e] px-3 py-1.5">
                       Слотов: 1000
                     </div>
@@ -115,14 +115,19 @@ export default function Home() {
                     </div>
                   </div>
                 </div>
-                <div className="mx-auto aspect-video w-full overflow-hidden rounded-xl border border-[#DF2456]/20 shadow-lg shadow-[#DF2456]/5">
-                  <img
-                    alt="Minecraft сервер EternalCore"
-                    className="h-full w-full aspect-video object-cover"
-                    height="310"
-                    src="/placeholder.svg?height=310&width=550"
-                    width="550"
-                  />
+                <div className="flex items-center justify-center">
+                  <div className="relative">
+                    <div className="absolute -top-20 -left-20 h-[300px] w-[300px] rounded-full bg-gradient-to-r from-[#DF2456]/10 to-[#FB0D68]/10 blur-2xl -z-10" />
+                    <div className="border-8 border-[#DF2456]/50 rounded-lg overflow-hidden">
+                      <Image
+                        src="https://i.imgur.com/BfDs9Z8.png"
+                        alt="EternalCore Server"
+                        width={600}
+                        height={400}
+                        className="aspect-[3/2] object-cover"
+                      />
+                    </div>
+                  </div>
                 </div>
               </div>
             </div>
@@ -183,80 +188,73 @@ export default function Home() {
               <div className="h-[300px] w-[300px] rounded-full bg-gradient-to-r from-[#DF2456]/20 to-[#FB0D68]/20 blur-3xl" />
             </div>
             <div className="container px-4 md:px-6">
-              <div className="grid gap-6 lg:grid-cols-2 lg:gap-12">
+              <div className="mx-auto grid max-w-5xl gap-12 md:grid-cols-2">
                 <div className="flex flex-col justify-center space-y-4">
                   <div className="inline-flex items-center rounded-lg bg-muted px-3 py-1 text-sm w-fit">
                     <span className="mr-2 rounded-full bg-gradient-to-r from-[#DF2456] to-[#FB0D68] p-1">
-                      <Gift className="h-3 w-3 text-white" />
+                      <Download className="h-3 w-3 text-white" />
                     </span>
-                    Поддержка
+                    Как начать играть
                   </div>
                   <div className="space-y-2">
                     <h2 className="text-3xl font-bold tracking-tighter md:text-4xl/tight bg-gradient-to-r from-[#DF2456] to-[#FB0D68] text-transparent bg-clip-text">
-                      Поддержите сервер
+                      Присоединяйтесь к нам прямо сейчас
                     </h2>
-                    <p className="max-w-[600px] text-muted-foreground md:text-xl">
-                      Получите доступ к эксклюзивным возможностям и помогите серверу развиваться
+                    <p className="text-muted-foreground md:text-xl">
+                      Всего 3 простых шага отделяют вас от игры на нашем сервере
                     </p>
                   </div>
-                  <ul className="space-y-2 text-muted-foreground">
-                    <li className="flex items-center">
-                      <div className="mr-2 h-1 w-1 rounded-full bg-[#DF2456]"></div>
-                      Уникальные предметы и возможности
-                    </li>
-                    <li className="flex items-center">
-                      <div className="mr-2 h-1 w-1 rounded-full bg-[#DF2456]"></div>
-                      Доступ к закрытым территориям
-                    </li>
-                    <li className="flex items-center">
-                      <div className="mr-2 h-1 w-1 rounded-full bg-[#DF2456]"></div>
-                      Специальные команды и привилегии
-                    </li>
-                  </ul>
-                  <div className="flex flex-col gap-2 min-[400px]:flex-row pt-2">
-                    <Button className="bg-[#FB0D68] hover:bg-[#FB0D68]/90 text-white font-medium">
-                      Донат <ChevronRight className="ml-1 h-4 w-4" />
-                    </Button>
+                  <div className="space-y-4">
+                    <div className="space-y-2">
+                      <div className="flex h-8 w-8 items-center justify-center rounded-full bg-[#DF2456]/10 text-[#FB0D68]">
+                        1
+                      </div>
+                      <h3 className="text-xl font-bold">Скачайте Minecraft</h3>
+                      <p className="text-muted-foreground">
+                        Требуется Minecraft Java Edition версии 1.16.5 или выше
+                      </p>
+                    </div>
+                    <div className="space-y-2">
+                      <div className="flex h-8 w-8 items-center justify-center rounded-full bg-[#DF2456]/10 text-[#FB0D68]">
+                        2
+                      </div>
+                      <h3 className="text-xl font-bold">Добавьте наш сервер</h3>
+                      <p className="text-muted-foreground">
+                        Скопируйте IP-адрес <code className="text-[#FB0D68]">{serverIP}</code> и добавьте его в список серверов
+                      </p>
+                    </div>
+                    <div className="space-y-2">
+                      <div className="flex h-8 w-8 items-center justify-center rounded-full bg-[#DF2456]/10 text-[#FB0D68]">
+                        3
+                      </div>
+                      <h3 className="text-xl font-bold">Присоединяйтесь и играйте</h3>
+                      <p className="text-muted-foreground">
+                        Подключитесь к серверу и начните свое приключение в мире EternalCore
+                      </p>
+                    </div>
+                  </div>
+                  <div className="pt-4">
+                    <PlayDialog variant="play">
+                      <Button className="bg-[#FB0D68] hover:bg-[#FB0D68]/90 text-white font-medium">
+                        Подробная инструкция
+                        <ChevronRight className="ml-2 h-4 w-4" />
+                      </Button>
+                    </PlayDialog>
                   </div>
                 </div>
-                <div className="mx-auto aspect-video w-full overflow-hidden rounded-xl border border-[#DF2456]/20 shadow-lg shadow-[#DF2456]/5">
-                  <img
-                    alt="Донат на сервере EternalCore"
-                    className="h-full w-full aspect-video object-cover"
-                    height="310"
-                    src="/placeholder.svg?height=310&width=550"
-                    width="550"
-                  />
-                </div>
-              </div>
-            </div>
-          </section>
-          <section className="w-full py-12 md:py-24 lg:py-32 bg-muted/50">
-            <div className="container px-4 md:px-6">
-              <div className="flex flex-col items-center justify-center space-y-4 text-center">
-                <div className="inline-flex items-center rounded-lg bg-muted px-3 py-1 text-sm">
-                  <span className="mr-2 rounded-full bg-gradient-to-r from-[#DF2456] to-[#FB0D68] p-1">
-                    <Users className="h-3 w-3 text-white" />
-                  </span>
-                  Присоединяйтесь к нам
-                </div>
-                <div className="space-y-2">
-                  <h2 className="text-3xl font-bold tracking-tighter md:text-4xl/tight bg-gradient-to-r from-[#DF2456] to-[#FB0D68] text-transparent bg-clip-text">
-                    Начните играть прямо сейчас
-                  </h2>
-                  <p className="max-w-[900px] text-muted-foreground md:text-xl">
-                    Присоединяйтесь к тысячам игроков на нашем сервере и станьте частью нашего сообщества
-                  </p>
-                </div>
-                <div className="flex flex-col sm:flex-row gap-4 mt-6">
-                  <PlayDialog variant="download">
-                    <Button className="bg-[#FB0D68] hover:bg-[#FB0D68]/90 text-white font-medium px-8 py-6 text-lg">
-                      Скачать лаунчер
-                    </Button>
-                  </PlayDialog>
-                  <Button variant="outline" className="border-[#DF2456]/50 hover:bg-[#DF2456]/10 px-8 py-6 text-lg">
-                    Узнать больше
-                  </Button>
+                <div className="flex items-center justify-center">
+                  <div className="relative">
+                    <div className="absolute -z-10 h-full w-full rounded-xl bg-gradient-to-r from-[#DF2456]/10 to-[#FB0D68]/10 blur-xl" />
+                    <div className="border-8 border-[#DF2456]/50 rounded-lg overflow-hidden">
+                      <Image
+                        src="https://i.imgur.com/HYtN3kw.png"
+                        alt="Minecraft Java Edition"
+                        width={600}
+                        height={400}
+                        className="aspect-[3/2] object-cover"
+                      />
+                    </div>
+                  </div>
                 </div>
               </div>
             </div>

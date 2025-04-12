@@ -59,13 +59,26 @@ export function PlayDialog({ variant = 'play', children }: PlayDialogProps) {
             <>
               <div className="rounded-lg border p-4 bg-muted/50">
                 <div className="text-sm mb-2">IP-адрес сервера:</div>
-                <div className="flex items-center justify-between">
-                  <Input 
-                    readOnly 
-                    value={serverIP} 
-                    className="border-[#DF2456]/30 focus-visible:ring-[#FB0D68] bg-transparent"
-                  />
-                  <CopyButton value={serverIP} className="ml-2" />
+                <div className="flex items-center">
+                  <div className="relative flex-1">
+                    <Input 
+                      readOnly 
+                      value={serverIP} 
+                      className="border-[#DF2456]/30 focus-visible:ring-[#FB0D68] bg-transparent pr-10"
+                      onClick={(e) => {
+                        const input = e.target as HTMLInputElement;
+                        input.select();
+                        navigator.clipboard.writeText(serverIP);
+                      }}
+                    />
+                    <div className="absolute inset-y-0 right-0 flex items-center pr-3">
+                      <CopyButton 
+                        value={serverIP} 
+                        iconOnly 
+                        className="text-[#DF2456] hover:text-[#FB0D68] transition-colors" 
+                      />
+                    </div>
+                  </div>
                 </div>
               </div>
               <div className="space-y-2">
@@ -74,7 +87,7 @@ export function PlayDialog({ variant = 'play', children }: PlayDialogProps) {
                   <li>Откройте Minecraft версии 1.16.5</li>
                   <li>Выберите "Мультиплеер"</li>
                   <li>Нажмите "Добавить сервер"</li>
-                  <li>Введите IP-адрес: <span className="font-medium">{serverIP}</span></li>
+                  <li>Введите IP-адрес сервера из поля выше</li>
                   <li>Подключитесь и начните игру!</li>
                 </ol>
               </div>
@@ -93,17 +106,7 @@ export function PlayDialog({ variant = 'play', children }: PlayDialogProps) {
             </>
           )}
         </div>
-        <DialogFooter className="sm:justify-between">
-          {variant === 'play' ? (
-            <Button 
-              type="button" 
-              variant="secondary"
-              className="border-[#DF2456]/30 hover:bg-[#DF2456]/10"
-              asChild
-            >
-              <a href="/download" target="_blank">Скачать лаунчер</a>
-            </Button>
-          ) : null}
+        <DialogFooter className="flex justify-end">
           <Button 
             type="button" 
             className="bg-[#FB0D68] hover:bg-[#FB0D68]/90 text-white font-medium"

@@ -69,6 +69,8 @@ import { Label } from '@/components/ui/label';
 import { Select, SelectTrigger, SelectValue, SelectItem, SelectContent } from '@/components/ui/select';
 import { Pagination, PaginationContent, PaginationItem, PaginationPrevious, PaginationNext, PaginationEllipsis, PaginationLink } from '@/components/ui/pagination';
 import { Badge } from '@/components/ui/badge';
+import { AnticheatPanel } from './admin/anticheat-panel';
+import { StaffActivityPanel } from './admin/staff-activity-panel';
 
 interface AdminPanelProps {
   users: User[];
@@ -423,7 +425,6 @@ export function AdminPanel({ users: initialUsers }: AdminPanelProps) {
   const [userProfileOpen, setUserProfileOpen] = useState(false);
   const [selectedUser, setSelectedUser] = useState<User | null>(null);
   const [punishmentFilter, setPunishmentFilter] = useState('all');
-  const [anticheatFilter, setAnticheatFilter] = useState('all');
   const { showError, showSuccess } = useError();
   // Добавляем новые состояния для управления донат-пакетами и привилегиями
   const [showDonatePackageDialog, setShowDonatePackageDialog] = useState(false);
@@ -532,39 +533,6 @@ export function AdminPanel({ users: initialUsers }: AdminPanelProps) {
       type: 'success',
       title: 'Действие выполнено',
       message,
-      variant: 'default'
-    });
-  };
-
-  // Мокирование действий для античита
-  const handleAnticheatAction = (id: number, action: 'ban' | 'warn' | 'ignore') => {
-    let message = '';
-    switch (action) {
-      case 'ban':
-        message = 'Игрок успешно забанен за использование читов';
-        break;
-      case 'warn':
-        message = 'Игроку выдано предупреждение';
-        break;
-      case 'ignore':
-        message = 'Срабатывание античита помечено как ложное';
-        break;
-    }
-    
-    showSuccess({
-      type: 'success',
-      title: 'Действие выполнено',
-      message,
-      variant: 'default'
-    });
-  };
-
-  // Мокирование запроса статистики персонала
-  const handleStaffStatsRequest = (period: 'week' | 'month' | 'all') => {
-    showSuccess({
-      type: 'success',
-      title: 'Статистика обновлена',
-      message: `Загружена статистика за период: ${period === 'week' ? 'неделя' : period === 'month' ? 'месяц' : 'все время'}`,
       variant: 'default'
     });
   };
@@ -1163,145 +1131,7 @@ export function AdminPanel({ users: initialUsers }: AdminPanelProps) {
           </TabsContent>
           
           <TabsContent value="anticheat">
-            <Card className="border-[#DF2456]/30 shadow-lg">
-              <CardHeader>
-                <div className="flex items-center justify-between">
-                  <CardTitle>Детекты античита</CardTitle>
-                  <div className="flex space-x-2">
-                    <select 
-                      className="rounded-md border border-[#DF2456]/30 bg-background px-3 py-2 text-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#FB0D68]"
-                      value={anticheatFilter}
-                      onChange={(e) => setAnticheatFilter(e.target.value)}
-                    >
-                      <option value="all">Все уровни</option>
-                      <option value="high">Высокий уровень</option>
-                      <option value="medium">Средний уровень</option>
-                      <option value="low">Низкий уровень</option>
-                    </select>
-                    <Button variant="outline" className="border-[#DF2456]/30 hover:bg-[#DF2456]/10">
-                      <RefreshCw className="mr-2 h-4 w-4" /> Обновить
-                    </Button>
-                  </div>
-                </div>
-                <CardDescription>
-                  Последние срабатывания античита на сервере
-                </CardDescription>
-              </CardHeader>
-              <CardContent>
-                <div className="rounded-md border border-[#DF2456]/20">
-                  <Table>
-                    <TableHeader>
-                      <TableRow>
-                        <TableHead>ID</TableHead>
-                        <TableHead>Игрок</TableHead>
-                        <TableHead>Тип</TableHead>
-                        <TableHead>Описание</TableHead>
-                        <TableHead>Уровень</TableHead>
-                        <TableHead>Дата</TableHead>
-                        <TableHead>Действие</TableHead>
-                        <TableHead className="text-right">Подробности</TableHead>
-                      </TableRow>
-                    </TableHeader>
-                    <TableBody>
-                      <TableRow>
-                        <TableCell className="font-medium">1</TableCell>
-                        <TableCell>
-                          <div className="flex items-center space-x-2">
-                            <Avatar className="h-8 w-8">
-                              <AvatarFallback className="bg-gradient-to-r from-[#DF2456] to-[#FB0D68] text-white text-xs">
-                                RS
-                              </AvatarFallback>
-                            </Avatar>
-                            <span className="font-medium">RapidSky</span>
-                          </div>
-                        </TableCell>
-                        <TableCell>KillAura</TableCell>
-                        <TableCell>Удары по нескольким целям одновременно</TableCell>
-                        <TableCell>
-                          <span className="px-2 py-1 rounded-full text-xs bg-red-500/10 text-red-500">
-                            Высокий
-                          </span>
-                        </TableCell>
-                        <TableCell>10.05.2025 14:22</TableCell>
-                        <TableCell>Кик</TableCell>
-                        <TableCell className="text-right">
-                          <DropdownMenu>
-                            <DropdownMenuTrigger asChild>
-                              <Button variant="ghost" className="h-8 w-8 p-0">
-                                <ChevronDown className="h-4 w-4" />
-                              </Button>
-                            </DropdownMenuTrigger>
-                            <DropdownMenuContent align="end" className="border-[#DF2456]/30">
-                              <DropdownMenuLabel>Действия</DropdownMenuLabel>
-                              <DropdownMenuSeparator />
-                              <DropdownMenuItem onClick={() => handleAnticheatAction(1, 'ban')}>
-                                <Ban className="mr-2 h-4 w-4 text-red-500" />
-                                <span>Забанить игрока</span>
-                              </DropdownMenuItem>
-                              <DropdownMenuItem onClick={() => handleAnticheatAction(1, 'warn')}>
-                                <AlertCircle className="mr-2 h-4 w-4 text-yellow-500" />
-                                <span>Выдать предупреждение</span>
-                              </DropdownMenuItem>
-                              <DropdownMenuItem onClick={() => handleAnticheatAction(1, 'ignore')}>
-                                <XCircle className="mr-2 h-4 w-4" />
-                                <span>Пометить как ложное</span>
-                              </DropdownMenuItem>
-                            </DropdownMenuContent>
-                          </DropdownMenu>
-                        </TableCell>
-                      </TableRow>
-                      <TableRow>
-                        <TableCell className="font-medium">2</TableCell>
-                        <TableCell>
-                          <div className="flex items-center space-x-2">
-                            <Avatar className="h-8 w-8">
-                              <AvatarFallback className="bg-gradient-to-r from-[#DF2456] to-[#FB0D68] text-white text-xs">
-                                SB
-                              </AvatarFallback>
-                            </Avatar>
-                            <span className="font-medium">ShadowBlade</span>
-                          </div>
-                        </TableCell>
-                        <TableCell>Speed</TableCell>
-                        <TableCell>Аномальная скорость передвижения</TableCell>
-                        <TableCell>
-                          <span className="px-2 py-1 rounded-full text-xs bg-yellow-500/10 text-yellow-500">
-                            Средний
-                          </span>
-                        </TableCell>
-                        <TableCell>09.05.2025 19:45</TableCell>
-                        <TableCell>Предупреждение</TableCell>
-                        <TableCell className="text-right">
-                          <DropdownMenu>
-                            <DropdownMenuTrigger asChild>
-                              <Button variant="ghost" className="h-8 w-8 p-0">
-                                <ChevronDown className="h-4 w-4" />
-                              </Button>
-                            </DropdownMenuTrigger>
-                            <DropdownMenuContent align="end" className="border-[#DF2456]/30">
-                              <DropdownMenuLabel>Действия</DropdownMenuLabel>
-                              <DropdownMenuSeparator />
-                              <DropdownMenuItem onClick={() => handleAnticheatAction(2, 'ban')}>
-                                <Ban className="mr-2 h-4 w-4 text-red-500" />
-                                <span>Забанить игрока</span>
-                              </DropdownMenuItem>
-                              <DropdownMenuItem onClick={() => handleAnticheatAction(2, 'warn')}>
-                                <AlertCircle className="mr-2 h-4 w-4 text-yellow-500" />
-                                <span>Выдать предупреждение</span>
-                              </DropdownMenuItem>
-                              <DropdownMenuItem onClick={() => handleAnticheatAction(2, 'ignore')}>
-                                <XCircle className="mr-2 h-4 w-4" />
-                                <span>Пометить как ложное</span>
-                              </DropdownMenuItem>
-                            </DropdownMenuContent>
-                          </DropdownMenu>
-                        </TableCell>
-                      </TableRow>
-                    </TableBody>
-                  </Table>
-                </div>
-              </CardContent>
-            </Card>
+            <AnticheatPanel />
           </TabsContent>
           
           <TabsContent value="punishments-db">
@@ -1394,91 +1224,7 @@ export function AdminPanel({ users: initialUsers }: AdminPanelProps) {
           </TabsContent>
           
           <TabsContent value="staff-activity">
-            <Card className="border-[#DF2456]/30 shadow-lg">
-              <CardHeader>
-                <div className="flex items-center justify-between">
-                  <CardTitle>Активность персонала</CardTitle>
-                  <div className="flex space-x-2">
-                    <Tabs defaultValue="week" className="w-auto">
-                      <TabsList className="bg-background border border-[#DF2456]/20">
-                        <TabsTrigger value="week" onClick={() => handleStaffStatsRequest('week')}>Неделя</TabsTrigger>
-                        <TabsTrigger value="month" onClick={() => handleStaffStatsRequest('month')}>Месяц</TabsTrigger>
-                        <TabsTrigger value="all" onClick={() => handleStaffStatsRequest('all')}>Все время</TabsTrigger>
-                      </TabsList>
-                    </Tabs>
-                  </div>
-                </div>
-                <CardDescription>
-                  Статистика активности модераторов и администраторов
-                </CardDescription>
-              </CardHeader>
-              <CardContent>
-                <div className="rounded-md border border-[#DF2456]/20">
-                  <Table>
-                    <TableHeader>
-                      <TableRow>
-                        <TableHead>Модератор/Админ</TableHead>
-                        <TableHead>Роль</TableHead>
-                        <TableHead>Банов</TableHead>
-                        <TableHead>Мутов</TableHead>
-                        <TableHead>Предупреждений</TableHead>
-                        <TableHead>Разбанов</TableHead>
-                        <TableHead>Всего действий</TableHead>
-                        <TableHead>Последняя активность</TableHead>
-                      </TableRow>
-                    </TableHeader>
-                    <TableBody>
-                      <TableRow>
-                        <TableCell>
-                          <div className="flex items-center space-x-2">
-                            <Avatar className="h-8 w-8">
-                              <AvatarFallback className="bg-gradient-to-r from-[#DF2456] to-[#FB0D68] text-white text-xs">
-                                AU
-                              </AvatarFallback>
-                            </Avatar>
-                            <span className="font-medium">AdminUser</span>
-                          </div>
-                        </TableCell>
-                        <TableCell>
-                          <span className="px-2 py-1 rounded-full text-xs bg-red-500/10 text-red-500">
-                            Администратор
-                          </span>
-                        </TableCell>
-                        <TableCell>15</TableCell>
-                        <TableCell>8</TableCell>
-                        <TableCell>5</TableCell>
-                        <TableCell>3</TableCell>
-                        <TableCell className="font-medium">31</TableCell>
-                        <TableCell>10.05.2025 16:30</TableCell>
-                      </TableRow>
-                      <TableRow>
-                        <TableCell>
-                          <div className="flex items-center space-x-2">
-                            <Avatar className="h-8 w-8">
-                              <AvatarFallback className="bg-gradient-to-r from-[#DF2456] to-[#FB0D68] text-white text-xs">
-                                MU
-                              </AvatarFallback>
-                            </Avatar>
-                            <span className="font-medium">ModeratorUser</span>
-                          </div>
-                        </TableCell>
-                        <TableCell>
-                          <span className="px-2 py-1 rounded-full text-xs bg-blue-500/10 text-blue-500">
-                            Модератор
-                          </span>
-                        </TableCell>
-                        <TableCell>7</TableCell>
-                        <TableCell>12</TableCell>
-                        <TableCell>10</TableCell>
-                        <TableCell>1</TableCell>
-                        <TableCell className="font-medium">30</TableCell>
-                        <TableCell>09.05.2025 19:45</TableCell>
-                      </TableRow>
-                    </TableBody>
-                  </Table>
-                </div>
-              </CardContent>
-            </Card>
+            <StaffActivityPanel />
           </TabsContent>
           
           <TabsContent value="cheat-hunters">

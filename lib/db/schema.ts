@@ -108,3 +108,65 @@ export const serverMetricsSchema = {
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
   `
 }; 
+
+// Таблица для привязки аккаунтов Minecraft к аккаунтам сайта
+export const minecraftAccountsSchema = {
+  tableName: 'minecraft_accounts',
+  columns: `
+    id INT AUTO_INCREMENT PRIMARY KEY,
+    user_id INT NOT NULL,
+    minecraft_username VARCHAR(36) NOT NULL,
+    last_online BIGINT,
+    playtime_minutes INT DEFAULT 0,
+    achievements_count INT DEFAULT 0,
+    balance INT DEFAULT 0,
+    privilege VARCHAR(100),
+    total_donated INT DEFAULT 0,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+    FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE,
+    UNIQUE KEY unique_mc_account (minecraft_username)
+  `
+};
+
+// Таблица для временных кодов авторизации Minecraft
+export const authCodesSchema = {
+  tableName: 'minecraft_auth_codes',
+  columns: `
+    id INT AUTO_INCREMENT PRIMARY KEY,
+    user_id INT NOT NULL,
+    minecraft_username VARCHAR(36) NOT NULL,
+    auth_code VARCHAR(8) NOT NULL,
+    expires_at TIMESTAMP NOT NULL,
+    is_used BOOLEAN DEFAULT FALSE,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE,
+    INDEX idx_auth_code (auth_code),
+    INDEX idx_minecraft_username (minecraft_username)
+  `
+};
+
+// Типы для привязки аккаунтов Minecraft
+export type MinecraftAccount = {
+  id: number;
+  user_id: number;
+  minecraft_username: string;
+  last_online?: number;
+  playtime_minutes: number;
+  achievements_count: number;
+  balance: number;
+  privilege?: string;
+  total_donated: number;
+  created_at: string;
+  updated_at: string;
+};
+
+export type AuthCode = {
+  id: number;
+  user_id: number;
+  minecraft_username: string;
+  auth_code: string;
+  expires_at: string;
+  is_used: boolean;
+  created_at: string;
+}; 
