@@ -1,0 +1,62 @@
+# Конфигурация плагина WebHooker для интеграции с EternalCore
+
+# Настройки API
+api:
+  # URL API сайта
+  url: "https://eternalcore.ru/api"
+  # API ключ для запросов
+  key: "lYQOi8n0DJdQx9TwF1A4JpTrvfbsUEP7"
+  webhook_key: "VnYswOTnL5N2YAkQ1TnKwqhkH3FgXmxb"
+
+# Настройки метрик
+metrics:
+  # Интервал отправки метрик онлайна (в секундах)
+  interval: 60
+  # Включить отправку метрик
+  enabled: true
+
+# Настройки персонала
+staff:
+  # Разрешение, определяющее персонал
+  permission: "eternalcore.staff"
+  # Отслеживать подключения/отключения персонала
+  track_connections: true
+  # Отслеживать активность персонала
+  track_activity: true
+
+# Настройки античита
+anticheat:
+  # Включить отправку детектов античита
+  enabled: true
+  # Минимальный уровень детекта для отправки
+  min_level: 1
+  
+# Настройки Litebans
+litebans:
+  # Включить интеграцию с Litebans
+  enabled: true 
+
+# Настройки интеграции профилей с сайтом
+profile:
+  # Включить интеграцию профилей
+  enabled: true
+  # Интервал обновления данных игрока (в миллисекундах) - 5 минут по умолчанию
+  update_interval: 300000
+  # Интервал массовой отправки данных всех онлайн-игроков (в секундах) - 15 минут по умолчанию
+  bulk_update_interval: 900
+  # Сообщение при успешной привязке аккаунта
+  success_message: "&aВаш аккаунт успешно привязан к сайту EternalCore.ru!"
+  # Сообщение при ошибке привязки аккаунта
+  error_message: "&cОшибка при привязке аккаунта. Пожалуйста, проверьте код и попробуйте снова."
+  # Интеграция с PlayerPoints
+  playerpoints:
+    # Включить интеграцию с PlayerPoints
+    enabled: true
+    # Обновлять баланс при изменении
+    update_on_change: true
+  # Интеграция с LuckPerms
+  luckperms:
+    # Включить интеграцию с LuckPerms
+    enabled: true
+    # Обновлять профиль при изменении группы
+    update_on_change: true 

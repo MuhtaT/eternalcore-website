@@ -1,0 +1,28 @@
+name: WebHooker
+version: 1.0.0
+main: dev.nefor.webhooker.Main
+api-version: 1.16
+author: Nefor
+website: eternalcore.ru
+load: POSTWORLD
+description: Плагин который перехватывает значения с сервера и отправляет их на сайт 
+softdepend: [LiteBans, LuckPerms, PlayerPoints]
+commands:
+  webhooker:
+    description: Управление плагином WebHooker
+    aliases: [wh]
+    permission: webhooker.admin
+    usage: /webhooker <reload|test|getdata> [параметры...]
+  webauth:
+    description: Привязка аккаунта Minecraft к аккаунту на сайте
+    usage: /webauth <код>
+permissions:
+  webhooker.admin:
+    description: Доступ к командам администрирования плагина
+    default: op
+  eternalcore.staff:
+    description: Пользователь является членом персонала
+    default: op
+  webhooker.admin.debug:
+    description: Доступ к просмотру подробных данных при выполнении команд
+    default: op 

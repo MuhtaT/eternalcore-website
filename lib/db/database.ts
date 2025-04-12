@@ -875,38 +875,35 @@ export async function verifyAndLinkMinecraftAccount(authCode: string, minecraftU
   );
   
   if (codes.length === 0) {
-    return false;
+    return false; // Код не найден, истек или не соответствует нику
   }
   
   const code = codes[0];
   
   // Помечаем код как использованный
+  // Лучше делать это в транзакции вместе с привязкой, но для простоты пока так
   await pool.query(
     `UPDATE ${authCodesSchema.tableName} SET is_used = TRUE WHERE id = ?`,
     [code.id]
   );
   
-  // Проверяем, существует ли уже запись для этого Minecraft-аккаунта
-  const [existingAccounts] = await pool.query<mysql.RowDataPacket[]>(
-    `SELECT * FROM ${minecraftAccountsSchema.tableName} WHERE minecraft_username = ?`,
-    [minecraftUsername]
+  // Используем INSERT ... ON DUPLICATE KEY UPDATE для атомарной привязки/обновления
+  // Если запись с таким minecraft_username уже существует, обновляем user_id.
+  // Если не существует, вставляем новую запись.
+  await pool.query(
+    `INSERT INTO ${minecraftAccountsSchema.tableName} (user_id, minecraft_username) 
+     VALUES (?, ?)
+     ON DUPLICATE KEY UPDATE user_id = ?`,
+    [code.user_id, minecraftUsername, code.user_id] // Передаем user_id дважды: для INSERT и для UPDATE
   );
   
-  if (existingAccounts.length > 0) {
-    // Если аккаунт уже привязан к другому пользователю, обновляем привязку
-    await pool.query(
-      `UPDATE ${minecraftAccountsSchema.tableName} SET user_id = ? WHERE minecraft_username = ?`,
-      [code.user_id, minecraftUsername]
-    );
-  } else {
-    // Создаем новую запись о привязке аккаунта
-    await pool.query(
-      `INSERT INTO ${minecraftAccountsSchema.tableName} 
-      (user_id, minecraft_username) VALUES (?, ?)`,
-      [code.user_id, minecraftUsername]
-    );
-  }
-  
+  // Если пользователь привязал свой аккаунт, удаляем все остальные АКТИВНЫЕ коды авторизации для этого пользователя
+  // Это предотвращает ситуацию, когда пользователь генерирует несколько кодов, а потом использует старый
+  await pool.query(
+    `DELETE FROM ${authCodesSchema.tableName} WHERE user_id = ? AND is_used = FALSE`,
+    [code.user_id]
+  );
+
   return true;
 }
 
