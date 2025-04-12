@@ -865,46 +865,71 @@ export async function generateAuthCode(userId: number, minecraftUsername: string
  * Проверяет код авторизации и привязывает Minecraft-аккаунт к аккаунту на сайте
  */
 export async function verifyAndLinkMinecraftAccount(authCode: string, minecraftUsername: string): Promise<boolean> {
+  console.log(`[DB Verify] Starting verification for code: ${authCode}, username: ${minecraftUsername}`);
   const pool = await getConnection();
-  
-  // Получаем действительный код
-  const [codes] = await pool.query<mysql.RowDataPacket[]>(
-    `SELECT * FROM ${authCodesSchema.tableName} 
-     WHERE auth_code = ? AND minecraft_username = ? AND expires_at > NOW() AND is_used = FALSE`,
-    [authCode, minecraftUsername]
-  );
-  
-  if (codes.length === 0) {
-    return false; // Код не найден, истек или не соответствует нику
-  }
-  
-  const code = codes[0];
-  
-  // Помечаем код как использованный
-  // Лучше делать это в транзакции вместе с привязкой, но для простоты пока так
-  await pool.query(
-    `UPDATE ${authCodesSchema.tableName} SET is_used = TRUE WHERE id = ?`,
-    [code.id]
-  );
-  
-  // Используем INSERT ... ON DUPLICATE KEY UPDATE для атомарной привязки/обновления
-  // Если запись с таким minecraft_username уже существует, обновляем user_id.
-  // Если не существует, вставляем новую запись.
-  await pool.query(
-    `INSERT INTO ${minecraftAccountsSchema.tableName} (user_id, minecraft_username) 
-     VALUES (?, ?)
-     ON DUPLICATE KEY UPDATE user_id = ?`,
-    [code.user_id, minecraftUsername, code.user_id] // Передаем user_id дважды: для INSERT и для UPDATE
-  );
-  
-  // Если пользователь привязал свой аккаунт, удаляем все остальные АКТИВНЫЕ коды авторизации для этого пользователя
-  // Это предотвращает ситуацию, когда пользователь генерирует несколько кодов, а потом использует старый
-  await pool.query(
-    `DELETE FROM ${authCodesSchema.tableName} WHERE user_id = ? AND is_used = FALSE`,
-    [code.user_id]
-  );
+  let codeId: number | null = null; // Store code ID for later steps
 
-  return true;
+  try {
+    // Получаем действительный код
+    console.log('[DB Verify] Searching for active code...');
+    const [codes] = await pool.query<mysql.RowDataPacket[]>(
+      `SELECT * FROM ${authCodesSchema.tableName} 
+       WHERE auth_code = ? AND minecraft_username = ? AND expires_at > NOW() AND is_used = FALSE`,
+      [authCode, minecraftUsername]
+    );
+    console.log(`[DB Verify] Found codes: ${codes.length}`);
+
+    if (codes.length === 0) {
+      console.log('[DB Verify] Code not found, expired, or username mismatch.');
+      return false; // Код не найден, истек или не соответствует нику
+    }
+
+    const code = codes[0];
+    codeId = code.id; // Save the ID
+    const userId = code.user_id;
+    console.log(`[DB Verify] Found code ID: ${codeId}, User ID: ${userId}`);
+
+    // Помечаем код как использованный
+    console.log(`[DB Verify] Marking code ${codeId} as used...`);
+    const [updateResult] = await pool.query<mysql.ResultSetHeader>(
+      `UPDATE ${authCodesSchema.tableName} SET is_used = TRUE WHERE id = ?`,
+      [codeId]
+    );
+    console.log(`[DB Verify] Code marked as used. Affected rows: ${updateResult.affectedRows}`);
+
+    // Используем INSERT ... ON DUPLICATE KEY UPDATE для атомарной привязки/обновления
+    console.log(`[DB Verify] Inserting/Updating minecraft_accounts for user ${userId} with username ${minecraftUsername}...`);
+    const [linkResult] = await pool.query<mysql.ResultSetHeader>(
+      `INSERT INTO ${minecraftAccountsSchema.tableName} (user_id, minecraft_username) 
+       VALUES (?, ?)
+       ON DUPLICATE KEY UPDATE user_id = ?`,
+      [userId, minecraftUsername, userId] // Передаем user_id дважды: для INSERT и для UPDATE
+    );
+    console.log(`[DB Verify] Insert/Update result: Affected rows: ${linkResult.affectedRows}, Insert ID: ${linkResult.insertId}`);
+
+    // Если пользователь привязал свой аккаунт, удаляем все остальные АКТИВНЫЕ коды авторизации для этого пользователя
+    console.log(`[DB Verify] Deleting remaining active codes for user ${userId}...`);
+    const [deleteResult] = await pool.query<mysql.ResultSetHeader>(
+      `DELETE FROM ${authCodesSchema.tableName} WHERE user_id = ? AND is_used = FALSE`,
+      [userId]
+    );
+    console.log(`[DB Verify] Deleted remaining codes. Affected rows: ${deleteResult.affectedRows}`);
+
+    console.log('[DB Verify] Verification successful.');
+    return true;
+
+  } catch (dbError: any) {
+    console.error(`!!! [DB Verify] Database error during verification (Code ID: ${codeId}):`, dbError);
+    if (dbError instanceof Error) {
+      console.error('!!! DB Error Name:', dbError.name);
+      console.error('!!! DB Error Message:', dbError.message);
+      console.error('!!! DB Error Stack:', dbError.stack);
+    } else {
+      console.error('!!! Caught non-Error DB object:', dbError);
+    }
+    // Re-throw the error to be caught by the API route handler, resulting in a 500
+    throw dbError;
+  }
 }
 
 /**
